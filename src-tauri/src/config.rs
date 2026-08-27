@@ -95,7 +95,8 @@ pub struct DockConfig {
     #[serde(default = "accent")]
     pub accent: String,
     /// Hazir tema kimligi: custom | bigsur-dark | bigsur-light | aqua |
-    /// metal | aero | carbon | win11 | neon. Gorunumu CSS uretir.
+    /// metal | aero | carbon | win11 | neon | nord | sunset | frost |
+    /// matrix | retro95 | amethyst. Gorunumu CSS uretir.
     #[serde(default = "theme")]
     pub theme: String,
     /// Hover'da ikon arkasinda vurgu renkli hale
@@ -105,16 +106,18 @@ pub struct DockConfig {
     #[serde(default)]
     pub reflection: bool,
     /// Tiklama animasyonu: none | bounce | shake | pulse | spin | jelly
+    /// | pop | wobble | flip | tada | swing | dive
     #[serde(default = "click_anim")]
     pub click_anim: String,
-    /// Gizlenme/acilma animasyonu: slide | fade | scale | slide-fade
+    /// Gizlenme/acilma animasyonu: slide | fade | scale | slide-fade | bounce | unfold
     #[serde(default = "reveal_anim")]
     pub reveal_anim: String,
     /// Yalniz gizlenirken oynayan efekt:
     /// auto (acilmanin tersi) | fade | scale | blur | genie | flip | drop
+    /// | curl | swirl | dissolve | squeeze
     #[serde(default = "hide_anim")]
     pub hide_anim: String,
-    /// Hover ek hareketi: none | lift | tilt
+    /// Hover ek hareketi: none | lift | tilt | pop | swing | float | throb
     #[serde(default = "hover_anim")]
     pub hover_anim: String,
     /// Ikon altinda dusen golge

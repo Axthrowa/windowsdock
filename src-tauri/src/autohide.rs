@@ -51,6 +51,15 @@ impl Watcher {
                 match cursor_pos() {
                     Some((x, y)) => {
                         if x >= zone.0 && x <= zone.2 && y >= zone.1 && y <= zone.3 {
+                            // Tam ekran oyun/sunum: dock hic acilmaz. Pencere
+                            // ortusme testinden ONCE, cunku oyun ondeyken bile
+                            // araya giren kucuk bir katman penceresi (Steam ya
+                            // da surucu bindirmesi) ortusme testini gecirip
+                            // dock'u aciyor, gorunmuyor ama ses efekti caliyordu.
+                            if fullscreen_app_active() {
+                                std::thread::sleep(Duration::from_millis(250));
+                                continue;
+                            }
                             if desktop_only && !reveal_allowed() {
                                 // Dock'un alani baska bir pencerede: acmiyoruz
                                 // (tam ekran oyun, ekrani dolduran tarayici ya
@@ -97,6 +106,46 @@ impl Drop for Watcher {
         g.stop = true;
         cv.notify_all();
     }
+}
+
+/// Tam ekran bir uygulama (oyun, video, sunum) su an ekrani mi tutuyor?
+///
+/// `SHQueryUserNotificationState` kabugun "simdi bildirim gosterilir mi"
+/// durumudur; D3D tam ekran, sunum modu ve tam ekran magaza uygulamasi ayni
+/// yerden okunur. Pencere TARAMASI yapmadigi icin Akilli Uygulama Denetimi'ne
+/// takilmiyor (butun pencereleri gezen surumler takiliyordu) ve tek cagri.
+#[cfg(windows)]
+fn fullscreen_app_active() -> bool {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use windows::Win32::UI::Shell::{
+        SHQueryUserNotificationState, QUNS_APP, QUNS_BUSY, QUNS_PRESENTATION_MODE,
+        QUNS_RUNNING_D3D_FULL_SCREEN,
+    };
+
+    let busy = match unsafe { SHQueryUserNotificationState() } {
+        Ok(state) => {
+            state == QUNS_BUSY
+                || state == QUNS_RUNNING_D3D_FULL_SCREEN
+                || state == QUNS_PRESENTATION_MODE
+                || state == QUNS_APP
+        }
+        Err(_) => false,
+    };
+
+    static LAST: AtomicBool = AtomicBool::new(false);
+    if LAST.swap(busy, Ordering::Relaxed) != busy {
+        trace(if busy {
+            "tam ekran uygulama AKTIF (dock acilmaz, ses calmaz)"
+        } else {
+            "tam ekran uygulama bitti"
+        });
+    }
+    busy
+}
+
+#[cfg(not(windows))]
+fn fullscreen_app_active() -> bool {
+    false
 }
 
 /// Dock acilabilir mi?

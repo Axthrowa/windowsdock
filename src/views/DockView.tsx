@@ -5,7 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import Dock, { type VisibleEntry } from "../components/Dock";
 import { computeGeometry, kindOf, panelRect } from "../lib/magnify";
-import { moveTo, removeItem } from "../lib/items";
+import { groupWith, moveTo, removeItem } from "../lib/items";
 import * as ipc from "../lib/ipc";
 import { makeT } from "../lib/i18n";
 import { tintBytes } from "../lib/color";
@@ -93,9 +93,15 @@ export default function DockView() {
   // Yalniz yerlesimi etkileyen alanlara bagli: renk/efekt degisiklikleri
   // pencereyi yeniden boyutlandirip konumlandirmaz (ayarlarda surukleme
   // sirasinda saniyede onlarca IPC + AppBar cagrisi demekti).
+  // Olcum tek yerde: yerlesim de fare testi de ayni geometriden beslenir
+  // (eskiden ikisi ayri ayri hesapliyordu — ayni girdi, iki kat is).
+  const geo = useMemo(
+    () => (config ? computeGeometry(config, [...entries.map((e) => kindOf(e.item)), "icon"]) : null),
+    [config, entries]
+  );
+
   const layout = useMemo<ipc.LayoutReq | null>(() => {
-    if (!config) return null;
-    const geo = computeGeometry(config, [...entries.map((e) => kindOf(e.item)), "icon"]);
+    if (!config || !geo) return null;
     return {
       width: geo.winW,
       height: geo.winH,
@@ -111,7 +117,7 @@ export default function DockView() {
       // Masaustu duzeyinde bir arac penceresi calisma alanini daraltmamali.
       reserve: config.reserveSpace && !config.autoHide && config.layer !== "desktop",
     };
-  }, [config, entries]);
+  }, [config, geo]);
   const layoutKey = layout ? JSON.stringify(layout) : "";
   layoutRef.current = layout;
 
@@ -119,8 +125,7 @@ export default function DockView() {
   // Pencere panelden buyuk (buyuyen ikon + etiket payi); bu seffaf kusak
   // aksi halde masaustune giden tiklamalari yutuyordu.
   useEffect(() => {
-    if (!config) return;
-    const geo = computeGeometry(config, [...entries.map((e) => kindOf(e.item)), "icon"]);
+    if (!config || !geo) return;
     const r = panelRect(geo, config.edge);
     const dpr = window.devicePixelRatio || 1;
     ipc.setHitRect({
@@ -129,7 +134,7 @@ export default function DockView() {
       w: Math.round(r.w * dpr),
       h: Math.round(r.h * dpr),
     });
-  }, [layoutKey, config, entries]);
+  }, [layoutKey, config, geo]);
 
   useEffect(() => {
     if (!layoutRef.current) return;
@@ -583,6 +588,22 @@ export default function DockView() {
     [commit]
   );
 
+  /** Ikon baska bir ikonun uzerine birakildi: ikisinden yeni grup kur. */
+  const onGroupWith = useCallback(
+    (item: DockItem, targetId: string) => {
+      const cfg = cfgRef.current;
+      if (!cfg || item.id === targetId) return;
+      const items = groupWith(cfg.items, item.id, targetId, makeT(cfg.language)("group"));
+      if (items === cfg.items) return; // birlestirilemedi (grup/ayrac)
+      snd("add");
+      commit({ ...cfg, items });
+      // Yeni grup hemen acilsin: kullanici neyin icine girdigini gorsun.
+      const made = items.find((i) => i.kind === "group" && i.children?.some((c) => c.id === item.id));
+      if (made) setExpandedId(made.id);
+    },
+    [commit, snd]
+  );
+
   /** Gruptan cikarma: koke, istenen sirada geri koy (silme degil). */
   const onMoveOut = useCallback(
     (item: DockItem, index: number) => {
@@ -661,6 +682,7 @@ export default function DockView() {
       binEmpty={binEmpty}
       onToggleGroup={onToggleGroup}
       onDropIntoGroup={onDropIntoGroup}
+      onGroupWith={onGroupWith}
       onMoveOut={onMoveOut}
       icons={icons}
       hidden={hidden}

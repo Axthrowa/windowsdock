@@ -18,7 +18,13 @@ export type ThemeId =
   | "aero"
   | "carbon"
   | "win11"
-  | "neon";
+  | "neon"
+  | "nord"
+  | "sunset"
+  | "frost"
+  | "matrix"
+  | "retro95"
+  | "amethyst";
 
 export interface ThemeDef {
   id: ThemeId;
@@ -139,6 +145,90 @@ export const THEMES: ThemeDef[] = [
       accent: "#7cf3ff",
       radius: 18,
       panelOpacity: 0.5,
+      reflection: true,
+      glow: true,
+      iconShadow: true,
+      shadow: false,
+    },
+  },
+  {
+    id: "nord",
+    labelKey: "thNord",
+    apply: {
+      bgColor: "#2e3440",
+      accent: "#88c0d0",
+      radius: 14,
+      panelOpacity: 0.82,
+      reflection: false,
+      glow: true,
+      iconShadow: true,
+      shadow: false,
+    },
+  },
+  {
+    id: "sunset",
+    labelKey: "thSunset",
+    apply: {
+      bgColor: "#26162c",
+      accent: "#ff9a6c",
+      radius: 22,
+      panelOpacity: 0.62,
+      reflection: true,
+      glow: true,
+      iconShadow: true,
+      shadow: true,
+    },
+  },
+  {
+    id: "frost",
+    labelKey: "thFrost",
+    apply: {
+      bgColor: "#f0f8ff",
+      accent: "#3b8fd0",
+      radius: 24,
+      panelOpacity: 0.52,
+      reflection: false,
+      glow: true,
+      iconShadow: true,
+      shadow: true,
+    },
+  },
+  {
+    id: "matrix",
+    labelKey: "thMatrix",
+    apply: {
+      bgColor: "#020a06",
+      accent: "#40ff96",
+      radius: 6,
+      panelOpacity: 0.9,
+      reflection: false,
+      glow: true,
+      iconShadow: false,
+      shadow: false,
+    },
+  },
+  {
+    id: "retro95",
+    labelKey: "thRetro95",
+    apply: {
+      bgColor: "#d4d0c8",
+      accent: "#000080",
+      radius: 0,
+      panelOpacity: 1,
+      reflection: false,
+      glow: false,
+      iconShadow: false,
+      shadow: true,
+    },
+  },
+  {
+    id: "amethyst",
+    labelKey: "thAmethyst",
+    apply: {
+      bgColor: "#22123a",
+      accent: "#c6a0ff",
+      radius: 20,
+      panelOpacity: 0.66,
       reflection: true,
       glow: true,
       iconShadow: true,

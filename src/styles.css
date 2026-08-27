@@ -91,6 +91,35 @@ html[data-view="dock"] body {
 .stage[data-hidden][data-reveal="slide"][data-edge="right"] .panel,
 .stage[data-hidden][data-reveal="slide-fade"][data-edge="right"] .panel { transform: translate3d(calc(100% + 24px), 0, 0); }
 
+/* Ziplayarak girme: kayma ile ayni gizli konum, acilirken hafif tasma.
+   Gecis fonksiyonu GORUNUR kuralda tanimlanir; acilirken kullanilan odur. */
+.stage[data-reveal="bounce"] .panel {
+  transition-timing-function: cubic-bezier(0.16, 1.5, 0.32, 1);
+}
+.stage[data-hidden][data-reveal="bounce"] .panel { transform: translate3d(0, calc(100% + 24px), 0); }
+.stage[data-hidden][data-reveal="bounce"][data-edge="top"] .panel { transform: translate3d(0, calc(-100% - 24px), 0); }
+.stage[data-hidden][data-reveal="bounce"][data-edge="left"] .panel { transform: translate3d(calc(-100% - 24px), 0, 0); }
+.stage[data-hidden][data-reveal="bounce"][data-edge="right"] .panel { transform: translate3d(calc(100% + 24px), 0, 0); }
+
+/* Acilma: kenardan mentese gibi one dogru acilir */
+.stage[data-hidden][data-reveal="unfold"] .panel { opacity: 0; }
+.stage[data-hidden][data-reveal="unfold"][data-edge="bottom"] .panel {
+  transform-origin: 50% 100%;
+  transform: perspective(700px) rotateX(-74deg);
+}
+.stage[data-hidden][data-reveal="unfold"][data-edge="top"] .panel {
+  transform-origin: 50% 0%;
+  transform: perspective(700px) rotateX(74deg);
+}
+.stage[data-hidden][data-reveal="unfold"][data-edge="left"] .panel {
+  transform-origin: 0% 50%;
+  transform: perspective(700px) rotateY(-74deg);
+}
+.stage[data-hidden][data-reveal="unfold"][data-edge="right"] .panel {
+  transform-origin: 100% 50%;
+  transform: perspective(700px) rotateY(74deg);
+}
+
 .stage[data-hidden][data-reveal="fade"] .panel  { opacity: 0; }
 .stage[data-hidden][data-reveal="slide-fade"] .panel { opacity: 0; }
 .stage[data-hidden][data-reveal="scale"] .panel { transform: scale(0.72); opacity: 0; }
@@ -164,6 +193,47 @@ html[data-view="dock"] body {
   transform: translate3d(0, -150%, 0) rotate(-7deg);
 }
 
+/* Kivrilma: kenara dogru burulup kuculur */
+.stage[data-edge][data-hidden][data-hide="curl"] .panel {
+  opacity: 0;
+  transform: rotate(-18deg) scale(0.3);
+  transition-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4);
+}
+.stage[data-edge="bottom"][data-hidden][data-hide="curl"] .panel { transform-origin: 8% 100%; }
+.stage[data-edge="top"][data-hidden][data-hide="curl"] .panel { transform-origin: 8% 0%; }
+.stage[data-edge="left"][data-hidden][data-hide="curl"] .panel { transform-origin: 0% 8%; }
+.stage[data-edge="right"][data-hidden][data-hide="curl"] .panel { transform-origin: 100% 8%; }
+
+/* Girdap: donerek bir noktaya cekilir */
+.stage[data-edge][data-hidden][data-hide="swirl"] .panel {
+  opacity: 0;
+  transform: rotate(200deg) scale(0.05);
+  transition-timing-function: cubic-bezier(0.6, 0, 0.8, 0.35);
+}
+
+/* Dagilma: bulaniklasarak genisleyip kaybolur */
+.stage[data-edge][data-hidden][data-hide="dissolve"] .panel {
+  opacity: 0;
+  transform: scale(1.18);
+  filter: blur(10px);
+}
+
+/* Sikisma: kenar boyunca ince bir cizgiye iner */
+.stage[data-edge="bottom"][data-hidden][data-hide="squeeze"] .panel,
+.stage[data-edge="top"][data-hidden][data-hide="squeeze"] .panel {
+  opacity: 0;
+  transform: scale(1, 0.04);
+}
+.stage[data-edge="left"][data-hidden][data-hide="squeeze"] .panel,
+.stage[data-edge="right"][data-hidden][data-hide="squeeze"] .panel {
+  opacity: 0;
+  transform: scale(0.04, 1);
+}
+.stage[data-edge="bottom"][data-hidden][data-hide="squeeze"] .panel { transform-origin: 50% 100%; }
+.stage[data-edge="top"][data-hidden][data-hide="squeeze"] .panel { transform-origin: 50% 0%; }
+.stage[data-edge="left"][data-hidden][data-hide="squeeze"] .panel { transform-origin: 0% 50%; }
+.stage[data-edge="right"][data-hidden][data-hide="squeeze"] .panel { transform-origin: 100% 50%; }
+
 /* --- surukleme tutamaci --- */
 .grip {
   position: absolute;
@@ -218,6 +288,18 @@ html[data-view="dock"] body {
 .panel.settling .icon { transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1); }
 
 .icon__inner { display: block; position: relative; width: 100%; height: 100%; pointer-events: none; }
+
+/* Tiklama animasyonu katmani.
+   Hover hareketi .icon__inner'in transform'unu kullanir; tiklama animasyonu da
+   ayni ozelligi animasyonlarsa animasyon biter bitmez ikon hover konumuna
+   sicriyordu. Ayri katman -> iki transform yan yana yasar. */
+.icon__fx {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform: translate3d(0, 0, 0);
+}
 
 /* Ikon altligi (Nexus "Tiles"): yalniz tanimlayan temalarda gorunur. */
 .icon__inner::before {
@@ -321,16 +403,6 @@ html[data-view="dock"] body {
   );
 }
 .icon--sep .icon__inner::before { content: none; }
-
-.icon--back .icon__inner svg {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.62);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  padding: 26%;
-}
-.icon--back:hover .icon__inner svg { stroke: var(--accent, #4fa3ff); }
 
 /* Grup kapagi: ilk dort ogenin 2x2 izgarasi (macOS "stack" hissi) */
 .group__grid {
@@ -500,6 +572,12 @@ html[data-view="dock"] body {
 .anim-pulse  { animation: a-pulse 380ms ease-out; }
 .anim-spin   { animation: a-spin 520ms cubic-bezier(0.3, 0.8, 0.3, 1); }
 .anim-jelly  { animation: a-jelly 620ms cubic-bezier(0.25, 1.4, 0.4, 1); }
+.anim-pop    { animation: a-pop 340ms cubic-bezier(0.2, 1.6, 0.4, 1); }
+.anim-wobble { animation: a-wobble 620ms ease-out; }
+.anim-flip   { animation: a-flip 560ms cubic-bezier(0.3, 0.9, 0.3, 1); }
+.anim-tada   { animation: a-tada 720ms ease-out; }
+.anim-swing  { animation: a-swing 640ms cubic-bezier(0.3, 0.9, 0.35, 1); transform-origin: 50% 0%; }
+.anim-dive   { animation: a-dive 520ms cubic-bezier(0.32, 0.9, 0.3, 1); }
 
 @keyframes a-bounce {
   0%   { transform: translateY(0) scale(1); }
@@ -532,6 +610,46 @@ html[data-view="dock"] body {
   82%  { transform: scale(0.96, 1.04); }
   100% { transform: scale(1, 1); }
 }
+@keyframes a-pop {
+  0%   { transform: scale(1); }
+  38%  { transform: scale(0.86); }
+  100% { transform: scale(1); }
+}
+@keyframes a-wobble {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  15% { transform: translateX(-12%) rotate(-9deg); }
+  30% { transform: translateX(9%) rotate(7deg); }
+  45% { transform: translateX(-7%) rotate(-5deg); }
+  60% { transform: translateX(5%) rotate(3deg); }
+  75% { transform: translateX(-2%) rotate(-1deg); }
+}
+@keyframes a-flip {
+  0%   { transform: perspective(360px) rotateY(0deg); }
+  100% { transform: perspective(360px) rotateY(360deg); }
+}
+@keyframes a-tada {
+  0%   { transform: scale(1) rotate(0deg); }
+  12%  { transform: scale(0.9) rotate(-4deg); }
+  26%  { transform: scale(1.14) rotate(4deg); }
+  40%  { transform: scale(1.14) rotate(-4deg); }
+  54%  { transform: scale(1.14) rotate(4deg); }
+  68%  { transform: scale(1.14) rotate(-4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+@keyframes a-swing {
+  0%   { transform: rotate(0deg); }
+  22%  { transform: rotate(14deg); }
+  46%  { transform: rotate(-10deg); }
+  68%  { transform: rotate(6deg); }
+  86%  { transform: rotate(-3deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes a-dive {
+  0%   { transform: translateY(0) scale(1); }
+  35%  { transform: translateY(26%) scale(0.9, 1.08); }
+  70%  { transform: translateY(-10%) scale(1.04, 0.96); }
+  100% { transform: translateY(0) scale(1); }
+}
 
 /* --- hover ek hareketi (buyutmenin ustune biner, ic katmanda) ---
    Yon dock'un kenarina gore: ikon her zaman ekranin ICINE dogru hareket eder,
@@ -552,7 +670,45 @@ html[data-view="dock"] body {
   transform: perspective(220px) rotateY(-14deg);
 }
 
+/* Buyume: buyutmenin ustune ek olcek */
+.stage[data-hover="pop"] .icon:hover .icon__inner { transform: scale(1.12); }
+
+/* Egilme: kenara dogru hafif yatis */
+.stage[data-hover="swing"] .icon:hover .icon__inner { transform: rotate(-7deg); }
+.stage[data-hover="swing"][data-edge="left"] .icon:hover .icon__inner,
+.stage[data-hover="swing"][data-edge="right"] .icon:hover .icon__inner {
+  transform: rotate(7deg);
+}
+
+/* Suzulme: yerinde yumusak salinim (dongulu) */
+.stage[data-hover="float"] .icon:hover .icon__inner {
+  animation: h-float 1600ms ease-in-out infinite;
+}
+@keyframes h-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9%); }
+}
+.stage[data-hover="float"][data-edge="top"] .icon:hover .icon__inner {
+  animation-name: h-float-down;
+}
+@keyframes h-float-down {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(9%); }
+}
+
+/* Nabiz: hafif buyuyup kuculen dongu */
+.stage[data-hover="throb"] .icon:hover .icon__inner {
+  animation: h-throb 1100ms ease-in-out infinite;
+}
+@keyframes h-throb {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.09); }
+}
+
 .icon__inner { transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+/* Dongulu hover efektlerinde gecis animasyonla catisir; kapatiyoruz. */
+.stage[data-hover="float"] .icon:hover .icon__inner,
+.stage[data-hover="throb"] .icon:hover .icon__inner { transition: none; }
 
 /* --- etiket --- */
 .tooltip {
@@ -706,6 +862,117 @@ html[data-view="dock"] body {
     inset 0 1px 0 rgba(255, 255, 255, 0.14);
   --panel-drop: 0 0 22px var(--accent-soft, rgba(124, 243, 255, 0.38));
   --panel-overlay-shadow: 0 0 12px var(--accent-faint, rgba(124, 243, 255, 0.14));
+}
+
+/* Nord: soguk gri-mavi, mat, keskin olmayan kenar */
+[data-theme="nord"] {
+  --panel-bg:
+    linear-gradient(180deg, rgba(216, 222, 233, 0.10) 0%, rgba(46, 52, 64, 0.06) 100%),
+    var(--bg, rgba(46, 52, 64, 0.82));
+  --panel-border: 1px solid rgba(136, 192, 208, 0.22);
+  --panel-inset: inset 0 1px 0 rgba(236, 239, 244, 0.12);
+  --panel-drop: 0 10px 28px rgba(0, 0, 0, 0.45);
+  --tile-bg: linear-gradient(180deg, rgba(236, 239, 244, 0.07), rgba(0, 0, 0, 0.12));
+  --tile-border: 1px solid rgba(136, 192, 208, 0.14);
+}
+
+/* Gun batimi: sicak turuncu-mor gecis, yumusak hale */
+[data-theme="sunset"] {
+  --panel-bg:
+    linear-gradient(135deg, rgba(255, 138, 76, 0.34) 0%, rgba(255, 94, 128, 0.22) 44%, rgba(112, 66, 190, 0.30) 100%),
+    var(--bg, rgba(38, 22, 44, 0.62));
+  --panel-border: 1px solid rgba(255, 197, 160, 0.32);
+  --panel-inset: inset 0 1px 0 rgba(255, 226, 205, 0.34);
+  --panel-drop: 0 12px 34px rgba(72, 20, 48, 0.55), 0 0 18px rgba(255, 122, 92, 0.22);
+  --panel-overlay: radial-gradient(130% 90% at 50% -20%, rgba(255, 214, 170, 0.22), transparent 60%);
+  --tile-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.14));
+  --tile-border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+/* Buz: acik, yuksek saydamlik, buzlu cam kenari */
+[data-theme="frost"] {
+  --panel-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.66) 0%, rgba(226, 240, 250, 0.34) 52%, rgba(180, 210, 230, 0.18) 100%),
+    var(--bg, rgba(240, 248, 255, 0.52));
+  --panel-border: 1px solid rgba(255, 255, 255, 0.9);
+  --panel-inset: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(120, 170, 210, 0.16);
+  --panel-drop: 0 10px 30px rgba(70, 110, 150, 0.28);
+  --panel-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, transparent 42%);
+}
+[data-theme="frost"] .tooltip {
+  background: rgba(252, 253, 255, 0.96);
+  color: #16202b;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="frost"] .grip span { background: rgba(30, 60, 90, 0.32); }
+[data-theme="frost"] .grip:hover span { background: rgba(30, 60, 90, 0.68); }
+[data-theme="frost"] .icon--add .icon__inner svg {
+  stroke: rgba(30, 60, 90, 0.45);
+  border-color: rgba(30, 60, 90, 0.22);
+  background: rgba(30, 60, 90, 0.05);
+}
+[data-theme="frost"] .group__grid {
+  background: rgba(30, 60, 90, 0.08);
+  border-color: rgba(30, 60, 90, 0.16);
+}
+
+/* Terminal: fosfor yesili CRT, tarama cizgileri */
+[data-theme="matrix"] {
+  --panel-bg:
+    repeating-linear-gradient(0deg, rgba(0, 255, 130, 0.05) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, rgba(0, 40, 20, 0.9) 0%, rgba(0, 14, 8, 0.94) 100%),
+    var(--bg, rgba(2, 10, 6, 0.9));
+  --panel-border: 1px solid rgba(64, 255, 150, 0.35);
+  --panel-inset:
+    inset 0 0 18px rgba(64, 255, 150, 0.14),
+    inset 0 1px 0 rgba(64, 255, 150, 0.28);
+  --panel-drop: 0 0 20px rgba(38, 220, 120, 0.35), 0 8px 22px rgba(0, 0, 0, 0.7);
+  --tile-bg: linear-gradient(180deg, rgba(64, 255, 150, 0.08), rgba(0, 0, 0, 0.3));
+  --tile-border: 1px solid rgba(64, 255, 150, 0.2);
+}
+
+/* Retro 95: gri plaka, disari cikik bizel (klasik Windows) */
+[data-theme="retro95"] {
+  --panel-bg: linear-gradient(180deg, #d4d0c8 0%, #c3bfb7 100%);
+  --panel-border: 0 none;
+  --panel-inset:
+    inset 2px 2px 0 #ffffff,
+    inset -2px -2px 0 #6e6a63,
+    inset 3px 3px 0 #e8e5df,
+    inset -3px -3px 0 #9c9890;
+  --panel-drop: 3px 3px 0 rgba(0, 0, 0, 0.35);
+  --tile-bg: linear-gradient(180deg, #e6e3dd, #c9c5bd);
+  --tile-border: 0 none;
+  --tile-inset: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #7a766f;
+}
+[data-theme="retro95"] .grip span { background: #6e6a63; border-radius: 0; }
+[data-theme="retro95"] .grip:hover span { background: #2a2722; }
+[data-theme="retro95"] .tooltip {
+  background: #ffffe1;
+  color: #101010;
+  border: 1px solid #000;
+  border-radius: 0;
+}
+[data-theme="retro95"] .icon--add .icon__inner svg {
+  stroke: #4a463f;
+  border-color: #7a766f;
+  background: #d4d0c8;
+  border-radius: 0;
+}
+
+/* Ametist: mor cam, ic hale */
+[data-theme="amethyst"] {
+  --panel-bg:
+    linear-gradient(180deg, rgba(214, 176, 255, 0.20) 0%, rgba(88, 40, 150, 0.14) 50%, rgba(20, 8, 40, 0.24) 100%),
+    var(--bg, rgba(34, 18, 58, 0.66));
+  --panel-border: 1px solid rgba(198, 160, 255, 0.32);
+  --panel-inset:
+    inset 0 1px 0 rgba(232, 212, 255, 0.32),
+    inset 0 0 26px rgba(150, 90, 255, 0.16);
+  --panel-drop: 0 12px 32px rgba(24, 6, 48, 0.6), 0 0 20px rgba(158, 104, 255, 0.26);
+  --panel-overlay: radial-gradient(120% 80% at 50% -10%, rgba(226, 200, 255, 0.16), transparent 60%);
+  --tile-bg: linear-gradient(180deg, rgba(226, 200, 255, 0.12), rgba(0, 0, 0, 0.18));
+  --tile-border: 1px solid rgba(198, 160, 255, 0.16);
 }
 
 /* ================= Ayarlar penceresi ================= */
