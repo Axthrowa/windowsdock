@@ -118,6 +118,7 @@ pub struct DockConfig {
     #[serde(default = "hide_anim")]
     pub hide_anim: String,
     /// Hover ek hareketi: none | lift | tilt | pop | swing | float | throb
+    /// | jump | wiggle | spin | ring | sink
     #[serde(default = "hover_anim")]
     pub hover_anim: String,
     /// Ikon altinda dusen golge

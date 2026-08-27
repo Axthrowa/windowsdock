@@ -545,6 +545,11 @@ export default function SettingsView() {
             <option value="swing">{t("hoverSwing")}</option>
             <option value="float">{t("hoverFloat")}</option>
             <option value="throb">{t("hoverThrob")}</option>
+            <option value="jump">{t("hoverJump")}</option>
+            <option value="wiggle">{t("hoverWiggle")}</option>
+            <option value="spin">{t("hoverSpin")}</option>
+            <option value="ring">{t("hoverRing")}</option>
+            <option value="sink">{t("hoverSink")}</option>
           </select>
         </Row>
 
