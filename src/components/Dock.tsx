@@ -37,6 +37,8 @@ interface Props {
   onToggleGroup: (id: string | null) => void;
   /** Ikon bir grubun uzerine birakildi */
   onDropIntoGroup: (item: DockItem, groupId: string) => void;
+  /** Ikon baska bir ikonun uzerine birakildi: ikisinden yeni grup kur */
+  onGroupWith: (item: DockItem, targetId: string) => void;
   /** Grup icindeki oge disari cikarildi: koke don (index = kok sirasindaki yer) */
   onMoveOut: (item: DockItem, index: number) => void;
   onAdd: () => void;
@@ -84,7 +86,7 @@ interface DragState {
   dy: number;
   moved: boolean;
   out: boolean;
-  /** Uzerinde durulan grubun yuva indeksi (-1 = yok) */
+  /** Uzerine birakilacak hedef yuva: grup (icine ekle) ya da ikon (grup kur). -1 = yok */
   onGroup: number;
   rect: DOMRect;
 }
@@ -97,6 +99,22 @@ interface DragState {
 /** Yuvanin ait oldugu liste (add yuvasi icin null) */
 const rootParentOf = (slot: Slot | undefined) =>
   slot && slot.kind !== "add" ? slot.parent : null;
+
+/**
+ * Suruklenen yuva hedefin uzerine birakilabilir mi?
+ *
+ *  - hedef GRUP  -> ogeyi grubun icine ekle
+ *  - hedef IKON  -> ikisinden yeni grup kur
+ *
+ * Kaynak yalniz kisayol olabilir: grup icine grup konmuyor (tek katman), ayrac
+ * ve "+" yuvasi da gruplanmaz. Bu kontrol vurgulamayi da yonetir; aksi halde
+ * hedef "birakilabilir" gibi isaretlenip birakinca hicbir sey olmuyordu.
+ */
+const canDropOn = (src: Slot | undefined, target: Slot | undefined) =>
+  !!src &&
+  src.kind === "item" &&
+  !!target &&
+  (target.kind === "group" || target.kind === "item");
 
 const displaced = (i: number, from: number, to: number) => {
   if (from < to && i > from && i <= to) return i - 1;
@@ -117,6 +135,7 @@ export default function Dock(props: Props) {
     onLaunch,
     onToggleGroup,
     onDropIntoGroup,
+    onGroupWith,
     onMoveOut,
     onAdd,
     onEject,
@@ -406,8 +425,9 @@ export default function Dock(props: Props) {
         const p = horizontal ? e.clientX - r.left : e.clientY - r.top;
         const at = slotAt(geo, p);
         const target = at >= 0 ? slots[at] : undefined;
-        // Bir GRUBUN uzerindeysek siralama degil, "gruba ekle" hedefi.
-        if (target?.kind === "group" && at !== d.from) {
+        // Bir GRUBUN uzerindeysek "gruba ekle", baska bir IKONUN uzerindeysek
+        // "yeni grup kur" hedefi; ikisi de siralama degildir.
+        if (at !== d.from && canDropOn(slots[d.from], target)) {
           d.onGroup = at;
         } else {
           d.onGroup = -1;
@@ -444,6 +464,7 @@ export default function Dock(props: Props) {
       if (d.onGroup >= 0) {
         const target = slots[d.onGroup];
         if (target?.kind === "group") onDropIntoGroup(dragged, target.item.id);
+        else if (target?.kind === "item") onGroupWith(dragged, target.item.id);
       } else if (d.out) {
         // Grup icindeki oge disari suruklenirse koke doner; kokteki oge
         // masaustune geri konur.
@@ -478,7 +499,7 @@ export default function Dock(props: Props) {
       }
       schedule();
     },
-    [onDropIntoGroup, onEject, onMoveOut, onReorder, schedule, slots]
+    [onDropIntoGroup, onGroupWith, onEject, onMoveOut, onReorder, schedule, slots]
   );
 
   const activate = useCallback(
@@ -488,11 +509,14 @@ export default function Dock(props: Props) {
         return;
       }
       const anim = config.clickAnim;
-      const inner = anim && anim !== "none" ? el.querySelector<HTMLElement>(".icon__inner") : null;
-      if (inner) {
-        inner.className = "icon__inner";
-        void inner.offsetWidth; // reflow -> animasyonu yeniden tetikle
-        inner.classList.add(`anim-${anim}`);
+      // Animasyon .icon__fx uzerinde calisir; hover hareketi (.icon__inner)
+      // ile ayni transform'u paylassalardi animasyon biter bitmez ikon hover
+      // konumuna sicriyordu. Iki katman -> iki bagimsiz transform.
+      const fx = anim && anim !== "none" ? el.querySelector<HTMLElement>(".icon__fx") : null;
+      if (fx) {
+        fx.className = "icon__fx";
+        void fx.offsetWidth; // reflow -> animasyonu yeniden tetikle
+        fx.classList.add(`anim-${anim}`);
       }
       if (slot.kind === "add") onAdd();
       else if (slot.kind === "group") {
@@ -719,15 +743,17 @@ export default function Dock(props: Props) {
               }}
             >
               <span className="icon__inner">
-                {slot.kind === "add" ? (
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                ) : slot.kind === "group" ? (
-                  groupFace(item!)
-                ) : (
-                  face(item!)
-                )}
+                <span className="icon__fx">
+                  {slot.kind === "add" ? (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                  ) : slot.kind === "group" ? (
+                    groupFace(item!)
+                  ) : (
+                    face(item!)
+                  )}
+                </span>
               </span>
               {slot.kind === "item" && running[item!.id] && (
                 <span className="icon__running" aria-hidden="true" />

@@ -1,0 +1,4 @@
+# Kabuk betikleri WSL/Linux tarafinda calisiyor; CRLF ile "set: pipefail:
+# invalid option name" verip derleme daha ilk satirda duruyor.
+* text=auto
+*.sh text eol=lf

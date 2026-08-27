@@ -8,7 +8,7 @@ import { createRoot } from "react-dom/client";
 import Dock, { type VisibleEntry } from "./components/Dock";
 import { THEMES } from "./lib/themes";
 import { rgba } from "./lib/color";
-import { moveTo } from "./lib/items";
+import { groupWith, moveTo } from "./lib/items";
 import { makeT } from "./lib/i18n";
 import type { DockConfig, DockItem } from "./lib/ipc";
 import "./styles.css";
@@ -137,6 +137,7 @@ function DrawerDemo({ config, autoOpen = true }: { config: DockConfig; autoOpen?
       binEmpty={false}
       onToggleGroup={setOpenId}
       onDropIntoGroup={(it, gid) => setList((x) => moveTo(x, it.id, gid))}
+      onGroupWith={(it, tid) => setList((x) => groupWith(x, it.id, tid, "Grup"))}
       onMoveOut={(it) => setList((x) => moveTo(x, it.id, null))}
       icons={{}}
       hidden={false}
@@ -210,6 +211,7 @@ createRoot(document.getElementById("root")!).render(
             binEmpty={false}
             onToggleGroup={noop}
             onDropIntoGroup={noop}
+            onGroupWith={noop}
             onMoveOut={noop}
             icons={{}}
             hidden={false}

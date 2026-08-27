@@ -14,8 +14,8 @@ mod imp {
     use windows::Win32::System::Com::CoTaskMemFree;
     use windows::Win32::UI::Shell::Common::ITEMIDLIST;
     use windows::Win32::UI::Shell::{
-        IContextMenu, IShellFolder, SHBindToParent, SHParseDisplayName, CMF_EXPLORE, CMF_NORMAL,
-        CMINVOKECOMMANDINFO,
+        IContextMenu, IShellFolder, SHBindToParent, SHGetDesktopFolder, SHParseDisplayName,
+        CMF_EXPLORE, CMF_NORMAL, CMINVOKECOMMANDINFO,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
         AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, PostMessageW,
@@ -86,6 +86,36 @@ mod imp {
         out
     }
 
+    /// Masaustunun ZEMIN menusu (Goruntule, Sirala, Yenile, Yapistir, Yeni,
+    /// Goruntu ayarlari, Kisisellestir...).
+    ///
+    /// Dosya menusunden farki: tek bir ogeye degil, klasorun kendisine sorulur
+    /// (`CreateViewObject`), cunku masaustunde sag tikladigimizda secili bir
+    /// dosya yok. Dock'un bos alani da ayni sekilde "zemin" sayiliyor.
+    unsafe fn fill_desktop(menu: HMENU, hwnd: HWND) -> Option<IContextMenu> {
+        let folder: IShellFolder = match SHGetDesktopFolder() {
+            Ok(f) => f,
+            Err(e) => {
+                trace(&format!("SHGetDesktopFolder hata: {e}"));
+                return None;
+            }
+        };
+        let cm: IContextMenu = match folder.CreateViewObject(hwnd) {
+            Ok(cm) => cm,
+            Err(e) => {
+                trace(&format!("CreateViewObject(IContextMenu) hata: {e}"));
+                return None;
+            }
+        };
+        let hr = cm.QueryContextMenu(menu, 0, SHELL_MIN, SHELL_MAX, CMF_NORMAL);
+        if hr.is_ok() {
+            Some(cm)
+        } else {
+            trace(&format!("masaustu QueryContextMenu hata: {hr:?}"));
+            None
+        }
+    }
+
     /// Ana is parcaciginda cagrilmali; menu kapanana kadar bloklar.
     pub fn show(hwnd: HWND, path: Option<&str>, removable: bool, l: &super::MenuLabels) -> String {
         unsafe {
@@ -93,7 +123,13 @@ mod imp {
                 return String::new();
             };
 
-            let shell = path.and_then(|p| fill_shell(menu, hwnd, p));
+            // Oge uzerindeyse dosyanin menusu, bos alandaysa masaustu zemininin
+            // menusu. Ikisi de kabugun kendi IContextMenu'su; komut aralig
+            // ayni oldugu icin cagirma yolu tek.
+            let shell = match path {
+                Some(p) => fill_shell(menu, hwnd, p),
+                None => fill_desktop(menu, hwnd),
+            };
             if shell.is_some() {
                 separator(menu);
             }

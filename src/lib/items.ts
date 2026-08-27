@@ -106,3 +106,54 @@ export function moveWithin(items: DockItem[], id: string, dir: -1 | 1): DockItem
     return kids ? { ...i, children: kids } : i;
   });
 }
+
+/**
+ * Iki kisayoldan yeni bir grup kurar (macOS'ta ikonu ikonun uzerine birakmak).
+ *
+ * Grup, HEDEFIN yerine gecer: kullanici neyin uzerine biraktiysa grup orada
+ * belirir. Hedef bir grubun icindeyse grup o grubun icine degil, hedefin
+ * koktedeki atasinin yanina kurulur — hiyerarsi tek katman kalmali.
+ * Sadece kisayol + kisayol birlestirilir; grup/ayrac icin `items` aynen doner.
+ */
+export function groupWith(
+  items: DockItem[],
+  dragId: string,
+  targetId: string,
+  label: string
+): DockItem[] {
+  if (dragId === targetId) return items;
+  const dragged = findItem(items, dragId);
+  const target = findItem(items, targetId);
+  const ok = (i: DockItem | null) => !!i && i.kind !== "group" && i.kind !== "separator";
+  if (!ok(dragged) || !ok(target)) return items;
+
+  // Hedef bir grubun icindeyse konum capasi o gruptur; yeni grup onun ardina
+  // gelir (grup icine grup konmuyor).
+  const anchorId = parentOf(items, targetId) ?? targetId;
+  const group: DockItem = { ...makeGroup(label), children: [target!, dragged!] };
+
+  // Tek gecis: kok listeyi bastan kurarken suruklenen ogeyi her yerden dusur,
+  // capaya gelince yeni grubu yerlestir. Once "sil sonra ekle" yaptigimizda
+  // capa da silinmis oluyor ve ekleme indeksi kayiyordu.
+  const out: DockItem[] = [];
+  for (const i of items) {
+    if (i.id === dragId) continue; // koktekiyse listeden dusur
+    if (i.id === anchorId) {
+      if (anchorId === targetId) {
+        out.push(group); // hedefin tam yerine
+      } else {
+        // Capa grup: hedef cocugu (ve varsa suruklenen cocugu) cikar, grubu ardina koy.
+        const kids = (i.children ?? []).filter((c) => c.id !== targetId && c.id !== dragId);
+        out.push({ ...i, children: kids });
+        out.push(group);
+      }
+      continue;
+    }
+    out.push(
+      i.children?.some((c) => c.id === dragId)
+        ? { ...i, children: i.children.filter((c) => c.id !== dragId) }
+        : i
+    );
+  }
+  return out;
+}

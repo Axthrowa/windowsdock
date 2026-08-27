@@ -527,6 +527,12 @@ export default function SettingsView() {
             <option value="pulse">{t("animPulse")}</option>
             <option value="spin">{t("animSpin")}</option>
             <option value="jelly">{t("animJelly")}</option>
+            <option value="pop">{t("animPop")}</option>
+            <option value="wobble">{t("animWobble")}</option>
+            <option value="flip">{t("animFlip")}</option>
+            <option value="tada">{t("animTada")}</option>
+            <option value="swing">{t("animSwing")}</option>
+            <option value="dive">{t("animDive")}</option>
           </select>
         </Row>
 
@@ -535,6 +541,10 @@ export default function SettingsView() {
             <option value="none">{t("animNone")}</option>
             <option value="lift">{t("hoverLift")}</option>
             <option value="tilt">{t("hoverTilt")}</option>
+            <option value="pop">{t("hoverPop")}</option>
+            <option value="swing">{t("hoverSwing")}</option>
+            <option value="float">{t("hoverFloat")}</option>
+            <option value="throb">{t("hoverThrob")}</option>
           </select>
         </Row>
 
@@ -544,6 +554,8 @@ export default function SettingsView() {
             <option value="fade">{t("revFade")}</option>
             <option value="scale">{t("revScale")}</option>
             <option value="slide-fade">{t("revSlideFade")}</option>
+            <option value="bounce">{t("revBounce")}</option>
+            <option value="unfold">{t("revUnfold")}</option>
           </select>
         </Row>
 
@@ -556,6 +568,10 @@ export default function SettingsView() {
             <option value="genie">{t("hideGenie")}</option>
             <option value="flip">{t("hideFlip")}</option>
             <option value="drop">{t("hideDrop")}</option>
+            <option value="curl">{t("hideCurl")}</option>
+            <option value="swirl">{t("hideSwirl")}</option>
+            <option value="dissolve">{t("hideDissolve")}</option>
+            <option value="squeeze">{t("hideSqueeze")}</option>
           </select>
         </Row>
 

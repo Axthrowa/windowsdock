@@ -6,11 +6,15 @@ export type DockAlign = "start" | "center" | "end";
 /** "delay" = sureli gizleme, "dodge" = pencere kacinma */
 export type AutoHideMode = "delay" | "dodge";
 export type DockLayer = "desktop" | "normal" | "top";
-export type ClickAnim = "none" | "bounce" | "shake" | "pulse" | "spin" | "jelly";
-export type RevealAnim = "slide" | "fade" | "scale" | "slide-fade";
+export type ClickAnim =
+  | "none" | "bounce" | "shake" | "pulse" | "spin" | "jelly"
+  | "pop" | "wobble" | "flip" | "tada" | "swing" | "dive";
+export type RevealAnim = "slide" | "fade" | "scale" | "slide-fade" | "bounce" | "unfold";
 /** Gizlenirken oynayan efekt; "auto" = acilma animasyonunun tersi */
-export type HideAnim = "auto" | "fade" | "scale" | "blur" | "genie" | "flip" | "drop";
-export type HoverAnim = "none" | "lift" | "tilt";
+export type HideAnim =
+  | "auto" | "fade" | "scale" | "blur" | "genie" | "flip" | "drop"
+  | "curl" | "swirl" | "dissolve" | "squeeze";
+export type HoverAnim = "none" | "lift" | "tilt" | "pop" | "swing" | "float" | "throb";
 /** Rust tarafi settings/hide/quit secimlerini kendisi isler; buraya "" doner. */
 export type SoundScheme = "soft" | "click" | "retro";
 
