@@ -1,0 +1,58 @@
+[package]
+name = "windowsdock"
+version = "0.1.0"
+description = "Ultra-light macOS/RocketDock style dock for Windows"
+authors = ["axthrowa"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "windowsdock_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png", "protocol-asset"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-autostart = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+png = "0.17"
+
+[target.'cfg(windows)'.dependencies]
+# #[implement] makrosu mutlak `windows_core::` yollari uretir; crate dogrudan gerekli.
+windows-core = "0.61"
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+  "Win32_System_LibraryLoader",
+  "Win32_System_SystemServices",
+  "Win32_Graphics_Gdi",
+  "Win32_System_Com",
+  "Win32_UI_Controls",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_Common",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_Storage_FileSystem",
+  "Win32_System_ProcessStatus",
+  "Win32_System_Threading",
+  "Win32_System_Diagnostics_ToolHelp",
+] }
+
+[features]
+# Tauri CLI (`tauri build`) bu feature'i otomatik acar; bare `cargo build --release`
+# ile derlerken --features custom-protocol vermek zorunlu, yoksa binary dev modunda
+# kalir ve frontend gomulmez.
+custom-protocol = ["tauri/custom-protocol"]
+
+# Release profili: minimum binary + minimum RSS
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
+incremental = false

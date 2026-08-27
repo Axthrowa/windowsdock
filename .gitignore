@@ -1,0 +1,8 @@
+node_modules
+dist
+.vite
+src-tauri/target
+
+# derleme ciktilari
+*.zip
+src-tauri/gen/schemas

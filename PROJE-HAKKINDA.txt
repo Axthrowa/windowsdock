@@ -1,0 +1,16 @@
+WindowsDock — kaynak kod
+========================
+Bu klasor projenin tam kaynagi (928 KB). Derleme ciktilari (node_modules 89 MB,
+src-tauri/target 5.7 GB, dist) bilerek DAHIL EDILMEDI.
+
+Derleme calisma alani hala WSL icinde:
+    \\wsl.localhost\Ubuntu-26.04\home\axthrowa\windowsdock
+
+Neden: Rust derlemesi cok sayida kucuk dosya yazar; /mnt/c uzerinden (9p koprusu)
+bu 3-5 kat yavas calisir. Kaynagi burada okuyup duzenleyebilir, derlemeyi WSL
+tarafinda yapabilirsiniz. Tamamen buraya tasinmasini isterseniz soyleyin.
+
+Derleme:
+    cd ~/windowsdock && bash scripts/build.sh
+Cikti:
+    C:\Users\Axthrowa\Desktop\WindowsDock\{portable,setup}

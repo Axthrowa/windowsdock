@@ -1,0 +1,100 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "WindowsDock",
+  "version": "0.1.0",
+  "identifier": "com.axthrowa.windowsdock",
+
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "settings",
+        "title": "WindowsDock — Ayarlar",
+        "create": false,
+        "url": "settings.html",
+        "width": 460,
+        "height": 700,
+        "minWidth": 380,
+        "minHeight": 460,
+        "resizable": true,
+        "decorations": true,
+        "visible": false,
+        "center": true,
+        "skipTaskbar": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,Translate,BackForwardCache,AutofillServerCommunication,OptimizationHints --renderer-process-limit=1 --disable-background-networking --disable-component-update --disable-sync --disable-breakpad --no-pings --disable-renderer-backgrounding --autoplay-policy=no-user-gesture-required"
+      },
+      {
+        "label": "dock",
+        "title": "WindowsDock",
+        "url": "index.html",
+
+        "width": 720,
+        "height": 132,
+        "minWidth": 64,
+        "minHeight": 48,
+
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": false,
+        "shadow": false,
+
+        "skipTaskbar": true,
+        "resizable": false,
+        "maximizable": false,
+        "minimizable": false,
+        "fullscreen": false,
+
+        "visible": false,
+        "focus": false,
+        "center": false,
+
+        "dragDropEnabled": true,
+        "contentProtected": false,
+        "acceptFirstMouse": true,
+        "backgroundColor": "#00000000",
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,Translate,BackForwardCache,AutofillServerCommunication,OptimizationHints --renderer-process-limit=1 --disable-background-networking --disable-component-update --disable-sync --disable-breakpad --no-pings --disable-renderer-backgrounding --autoplay-policy=no-user-gesture-required"
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "img-src": "'self' asset: http://asset.localhost data: blob:",
+        "style-src": "'self' 'unsafe-inline'",
+        "font-src": "'self' data:",
+        "connect-src": "'self' ipc: http://ipc.localhost ws://localhost:1421 http://localhost:1420"
+      },
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
+    }
+  },
+
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "publisher": "Axthrowa",
+    "copyright": "Copyright (c) 2026 Axthrowa",
+    "shortDescription": "Hafif macOS/RocketDock tarzi dock",
+    "windows": {
+      "signCommand": "/home/axthrowa/windowsdock/scripts/sign.sh %1",
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Turkish", "English"]
+      }
+    }
+  }
+}
