@@ -157,3 +157,22 @@ export function groupWith(
   }
   return out;
 }
+
+/**
+ * Bu islemle BOSALAN gruplari siler.
+ *
+ * "Su an bos olan her grubu sil" demiyoruz: kullanici ayarlardan bilerek bos
+ * bir grup kurabiliyor ve icini doldurmadan once silinmemeli. Olcut, grubun
+ * onceki listede dolu olup simdi bosalmis olmasi — yani son ogesi disari
+ * cikarilmis olmasi.
+ */
+export function pruneEmptied(prev: DockItem[], next: DockItem[]): DockItem[] {
+  const wasFull = new Set(
+    prev.filter((i) => i.kind === "group" && (i.children?.length ?? 0) > 0).map((i) => i.id)
+  );
+  if (!wasFull.size) return next;
+  const out = next.filter(
+    (i) => !(i.kind === "group" && !(i.children?.length ?? 0) && wasFull.has(i.id))
+  );
+  return out.length === next.length ? next : out;
+}
