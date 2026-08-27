@@ -103,18 +103,24 @@ const rootParentOf = (slot: Slot | undefined) =>
 /**
  * Suruklenen yuva hedefin uzerine birakilabilir mi?
  *
- *  - hedef GRUP  -> ogeyi grubun icine ekle
- *  - hedef IKON  -> ikisinden yeni grup kur
+ *  - hedef GRUP -> ogeyi o grubun icine ekle (kokten de, baska gruptan da)
+ *  - hedef IKON -> ikisinden yeni grup kur; YALNIZ ikisi de koktekiyse
+ *
+ * Ikinci kosuldaki "ikisi de kokte" siniri onemli: grup icindeki bir ogeyi
+ * kok siradaki bir ikonun uzerine birakmak "gruptan cikar" demektir (asagida
+ * endDrag'deki onMoveOut dali). Bunu grup kurma hedefi sayarsak gruptan
+ * suruklerek cikarmak imkansiz hale geliyor, cunku her kok ikonu yeni grup
+ * kuruyor.
  *
  * Kaynak yalniz kisayol olabilir: grup icine grup konmuyor (tek katman), ayrac
  * ve "+" yuvasi da gruplanmaz. Bu kontrol vurgulamayi da yonetir; aksi halde
  * hedef "birakilabilir" gibi isaretlenip birakinca hicbir sey olmuyordu.
  */
-const canDropOn = (src: Slot | undefined, target: Slot | undefined) =>
-  !!src &&
-  src.kind === "item" &&
-  !!target &&
-  (target.kind === "group" || target.kind === "item");
+const canDropOn = (src: Slot | undefined, target: Slot | undefined) => {
+  if (!src || src.kind !== "item" || !target) return false;
+  if (target.kind === "group") return true;
+  return target.kind === "item" && src.parent === null && target.parent === null;
+};
 
 const displaced = (i: number, from: number, to: number) => {
   if (from < to && i > from && i <= to) return i - 1;
