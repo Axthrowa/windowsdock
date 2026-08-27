@@ -14,7 +14,9 @@ export type RevealAnim = "slide" | "fade" | "scale" | "slide-fade" | "bounce" | 
 export type HideAnim =
   | "auto" | "fade" | "scale" | "blur" | "genie" | "flip" | "drop"
   | "curl" | "swirl" | "dissolve" | "squeeze";
-export type HoverAnim = "none" | "lift" | "tilt" | "pop" | "swing" | "float" | "throb";
+export type HoverAnim =
+  | "none" | "lift" | "tilt" | "pop" | "swing" | "float" | "throb"
+  | "jump" | "wiggle" | "spin" | "ring" | "sink";
 /** Rust tarafi settings/hide/quit secimlerini kendisi isler; buraya "" doner. */
 export type SoundScheme = "soft" | "click" | "retro";
 
