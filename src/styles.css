@@ -1,0 +1,960 @@
+/* ================= Temel ================= */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+}
+
+body {
+  font: 500 12px/1.2 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  color: #eef2f7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeSpeed;
+}
+
+html[data-view="dock"] body {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+/* ================= Dock ================= */
+.stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stage[data-edge="bottom"] { align-items: flex-end; }
+.stage[data-edge="top"]    { align-items: flex-start; }
+.stage[data-edge="left"]   { justify-content: flex-start; }
+.stage[data-edge="right"]  { justify-content: flex-end; }
+
+/* ---- tema degiskenleri (varsayilan = "Ozel" temasi) ----
+   Nexus/ObjectDock skinleri 9-dilim PNG kullanir; burada ayni gorunumleri
+   CSS katmanlari uretiyor. Her tema yalnizca bu degiskenleri degistirir,
+   boylece hem dock paneli hem ayarlardaki onizleme ayni koddan beslenir. */
+:root {
+  --panel-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 42%, rgba(0, 0, 0, 0.06) 100%),
+    var(--bg, rgba(22, 26, 34, 0.62));
+  --panel-border: 1px solid rgba(255, 255, 255, 0.14);
+  --panel-inset: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --panel-drop: 0 10px 34px rgba(0, 0, 0, 0.42);
+  --panel-overlay: none;
+  --panel-overlay-shadow: none;
+  --tile-bg: none;
+  --tile-border: 0 none;
+  --tile-inset: none;
+}
+
+.panel {
+  position: relative;
+  border-radius: var(--radius, 18px);
+  background: var(--panel-bg);
+  border: var(--panel-border);
+  box-shadow: var(--panel-inset);
+  /* Kompozisyon katmanini sabitle; gizlenme animasyonu da bu transform uzerinden. */
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 240ms ease,
+    filter 260ms ease;
+  contain: layout style;
+}
+
+/* Tema susu (cam parlamasi, metal vidalar...). ::after birakma ipucuna ait. */
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--panel-overlay);
+  box-shadow: var(--panel-overlay-shadow);
+  pointer-events: none;
+}
+
+/* Arka golge varsayilan olarak kapali; ayarlardan acilir. */
+.panel--shadow { box-shadow: var(--panel-drop), var(--panel-inset); }
+
+/* --- otomatik gizlenme: secilebilir animasyon --- */
+.stage[data-hidden][data-reveal="slide"] .panel,
+.stage[data-hidden][data-reveal="slide-fade"] .panel { transform: translate3d(0, calc(100% + 24px), 0); }
+.stage[data-hidden][data-reveal="slide"][data-edge="top"] .panel,
+.stage[data-hidden][data-reveal="slide-fade"][data-edge="top"] .panel { transform: translate3d(0, calc(-100% - 24px), 0); }
+.stage[data-hidden][data-reveal="slide"][data-edge="left"] .panel,
+.stage[data-hidden][data-reveal="slide-fade"][data-edge="left"] .panel { transform: translate3d(calc(-100% - 24px), 0, 0); }
+.stage[data-hidden][data-reveal="slide"][data-edge="right"] .panel,
+.stage[data-hidden][data-reveal="slide-fade"][data-edge="right"] .panel { transform: translate3d(calc(100% + 24px), 0, 0); }
+
+.stage[data-hidden][data-reveal="fade"] .panel  { opacity: 0; }
+.stage[data-hidden][data-reveal="slide-fade"] .panel { opacity: 0; }
+.stage[data-hidden][data-reveal="scale"] .panel { transform: scale(0.72); opacity: 0; }
+
+/* --- kaybolma efektleri: secilirse acilma animasyonunun yerine gecer ---
+   Ayni ozgulluk seviyesi; kaynak sirasi geregi bunlar kazanir. */
+.stage[data-edge][data-hidden][data-hide="fade"] .panel {
+  transform: translate3d(0, 0, 0);
+  opacity: 0;
+}
+
+.stage[data-edge][data-hidden][data-hide="scale"] .panel {
+  transform: scale(0.58);
+  opacity: 0;
+}
+
+.stage[data-edge][data-hidden][data-hide="blur"] .panel {
+  transform: translate3d(0, 0, 0);
+  opacity: 0;
+  filter: blur(14px);
+}
+
+/* Cin: kenara dogru emilerek incelme (macOS "genie" hissi) */
+.stage[data-edge][data-hidden][data-hide="genie"] .panel {
+  opacity: 0;
+  transition-timing-function: cubic-bezier(0.55, 0, 0.68, 0.35);
+}
+.stage[data-edge="bottom"][data-hidden][data-hide="genie"] .panel {
+  transform-origin: 50% 100%;
+  transform: translate3d(0, 100%, 0) scale(0.12, 0.55);
+}
+.stage[data-edge="top"][data-hidden][data-hide="genie"] .panel {
+  transform-origin: 50% 0%;
+  transform: translate3d(0, -100%, 0) scale(0.12, 0.55);
+}
+.stage[data-edge="left"][data-hidden][data-hide="genie"] .panel {
+  transform-origin: 0% 50%;
+  transform: translate3d(-100%, 0, 0) scale(0.55, 0.12);
+}
+.stage[data-edge="right"][data-hidden][data-hide="genie"] .panel {
+  transform-origin: 100% 50%;
+  transform: translate3d(100%, 0, 0) scale(0.55, 0.12);
+}
+
+/* Devrilme: kenardan menteseli gibi arkaya yatar */
+.stage[data-edge][data-hidden][data-hide="flip"] .panel { opacity: 0; }
+.stage[data-edge="bottom"][data-hidden][data-hide="flip"] .panel {
+  transform-origin: 50% 100%;
+  transform: perspective(620px) rotateX(88deg);
+}
+.stage[data-edge="top"][data-hidden][data-hide="flip"] .panel {
+  transform-origin: 50% 0%;
+  transform: perspective(620px) rotateX(-88deg);
+}
+.stage[data-edge="left"][data-hidden][data-hide="flip"] .panel {
+  transform-origin: 0% 50%;
+  transform: perspective(620px) rotateY(88deg);
+}
+.stage[data-edge="right"][data-hidden][data-hide="flip"] .panel {
+  transform-origin: 100% 50%;
+  transform: perspective(620px) rotateY(-88deg);
+}
+
+/* Dusme: hafif egilerek asagi dusup kaybolur */
+.stage[data-edge][data-hidden][data-hide="drop"] .panel {
+  transform: translate3d(0, 150%, 0) rotate(7deg);
+  opacity: 0;
+  transition-timing-function: cubic-bezier(0.45, 0, 0.75, 0.3);
+}
+.stage[data-edge="top"][data-hidden][data-hide="drop"] .panel {
+  transform: translate3d(0, -150%, 0) rotate(-7deg);
+}
+
+/* --- surukleme tutamaci --- */
+.grip {
+  position: absolute;
+  display: grid;
+  place-content: center;
+  gap: 3px;
+  cursor: grab;
+  border-radius: 6px;
+}
+.grip:active { cursor: grabbing; }
+.grip span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.32);
+  transition: background 140ms ease;
+}
+.grip:hover span { background: rgba(255, 255, 255, 0.78); }
+
+.stage[data-edge="bottom"] .grip,
+.stage[data-edge="top"] .grip {
+  left: var(--pad); top: var(--pad); bottom: var(--pad); width: 14px;
+  grid-auto-flow: row;
+}
+.stage[data-edge="left"] .grip,
+.stage[data-edge="right"] .grip {
+  top: var(--pad); left: var(--pad); right: var(--pad); height: 14px;
+  grid-auto-flow: column;
+}
+
+/* --- ikonlar --- */
+.icon {
+  position: absolute;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  /* Sadece transform animasyonu -> yalniz compositor, layout/paint yok. */
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  -webkit-tap-highlight-color: transparent;
+}
+.icon:focus-visible { outline: 2px solid var(--accent, #6cb6ff); outline-offset: 3px; border-radius: 12px; }
+
+.stage[data-edge="bottom"] .icon { bottom: calc(var(--pad) + var(--reflect, 0px)); }
+.stage[data-edge="top"]    .icon { top: var(--pad); }
+.stage[data-edge="left"]   .icon { left: var(--pad); }
+.stage[data-edge="right"]  .icon { right: var(--pad); }
+
+/* Fare ayrildiginda yumusak toparlanma; hover sirasinda transition kapali. */
+.panel.settling .icon { transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+.icon__inner { display: block; position: relative; width: 100%; height: 100%; pointer-events: none; }
+
+/* Ikon altligi (Nexus "Tiles"): yalniz tanimlayan temalarda gorunur. */
+.icon__inner::before {
+  content: "";
+  position: absolute;
+  inset: -7%;
+  border-radius: 26%;
+  background: var(--tile-bg);
+  border: var(--tile-border);
+  box-shadow: var(--tile-inset);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.icon__inner img,
+.icon__inner .glyph,
+.icon__inner svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 24%;
+  object-fit: contain;
+}
+
+/* Gri tonlama: ikonlar gri, imlecin altindaki renkli (Nexus "Grayscale") */
+.stage[data-gray] .icon .icon__inner > * { filter: grayscale(1); }
+.stage[data-gray][data-shadow] .icon .icon__inner > * {
+  filter: grayscale(1) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.38));
+}
+.stage[data-gray] .icon:hover .icon__inner > * { filter: none; }
+.stage[data-gray][data-shadow] .icon:hover .icon__inner > * {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.38));
+}
+.stage[data-gray][data-glow] .icon:hover .icon__inner > * {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.38)) drop-shadow(0 0 10px var(--accent, #4fa3ff));
+}
+
+/* Calisan uygulama gostergesi (Nexus: Running Indicator) */
+.icon__running {
+  position: absolute;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent, #4fa3ff);
+  box-shadow: 0 0 6px var(--accent, #4fa3ff);
+  pointer-events: none;
+}
+.stage[data-edge="bottom"] .icon__running { bottom: -7px; transform: translateX(-50%); }
+.stage[data-edge="top"] .icon__running { top: -7px; transform: translateX(-50%); }
+.stage[data-edge="left"] .icon__running,
+.stage[data-edge="right"] .icon__running {
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.stage[data-edge="left"] .icon__running { left: -7px; }
+.stage[data-edge="right"] .icon__running { right: -7px; }
+
+/* Geri donusum kutusu (Nexus: Recycler modulu) */
+.bin {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 12%;
+}
+.bin svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: rgba(235, 242, 250, 0.82);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.bin .bin__fill { opacity: 0; transition: opacity 160ms ease; }
+.bin[data-full] svg { stroke: var(--accent, #4fa3ff); }
+.bin[data-full] .bin__fill { opacity: 1; }
+
+/* --- ayrac / geri / grup --- */
+.icon--sep { cursor: grab; }
+.icon--sep .icon__inner {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(255, 255, 255, 0.28) 18%,
+    rgba(255, 255, 255, 0.28) 82%,
+    transparent 100%
+  );
+  border-radius: 2px;
+}
+.stage[data-edge="left"] .icon--sep .icon__inner,
+.stage[data-edge="right"] .icon--sep .icon__inner {
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(255, 255, 255, 0.28) 18%,
+    rgba(255, 255, 255, 0.28) 82%,
+    transparent 100%
+  );
+}
+.icon--sep .icon__inner::before { content: none; }
+
+.icon--back .icon__inner svg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.62);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  padding: 26%;
+}
+.icon--back:hover .icon__inner svg { stroke: var(--accent, #4fa3ff); }
+
+/* Grup kapagi: ilk dort ogenin 2x2 izgarasi (macOS "stack" hissi) */
+.group__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 6%;
+  width: 100%;
+  height: 100%;
+  padding: 9%;
+  border-radius: 24%;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.group__cell {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22%;
+  display: block;
+}
+.group__cell img,
+.group__cell .glyph {
+  width: 100%;
+  height: 100%;
+  border-radius: 22%;
+  font-size: 60%;
+}
+.group__grid--empty,
+.group__grid--open {
+  display: grid;
+  place-items: center;
+  padding: 16%;
+}
+.group__grid--open svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--accent, #4fa3ff);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.group__grid--empty svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+/* Acik grubun cocuklarini saran plaka: "bunlar bu gruba ait" */
+.group-span {
+  position: absolute;
+  top: var(--pad);
+  bottom: calc(var(--pad) + var(--reflect, 0px));
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  z-index: 0;
+}
+.stage[data-edge="left"] .group-span,
+.stage[data-edge="right"] .group-span {
+  top: auto;
+  bottom: auto;
+  left: var(--pad);
+  right: var(--pad);
+}
+
+/* Acik grubun kendi ikonu: vurgulu cerceve */
+.icon--open .group__grid {
+  border-color: var(--accent, #4fa3ff);
+  background: var(--accent-faint, rgba(79, 163, 255, 0.14));
+}
+
+/* Surukleme sirasinda "bu grubun icine birak" vurgusu */
+.icon--drop .icon__inner {
+  outline: 2px solid var(--accent, #4fa3ff);
+  outline-offset: 3px;
+  border-radius: 26%;
+}
+.icon--drop .group__grid {
+  background: var(--accent-faint, rgba(79, 163, 255, 0.14));
+  border-color: var(--accent, #4fa3ff);
+}
+
+/* --- efektler --- */
+.stage[data-shadow] .icon__inner > * { filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.38)); }
+
+.stage[data-glow] .icon:hover .icon__inner > * {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.38)) drop-shadow(0 0 10px var(--accent, #4fa3ff));
+}
+
+/* Yansima: ikonun panel zeminindeki aynasi. Kutu sabit, icerik cevrilir. */
+.icon__mirror {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: var(--reflect, 0px);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.34;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent 92%);
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent 92%);
+}
+.icon__mirror > * {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--icon-size, 52px);
+  transform: scaleY(-1);
+  filter: none;
+}
+
+/* Surukle-birak hedefi */
+.stage[data-drop] .panel {
+  outline: 2px dashed var(--accent, #4fa3ff);
+  outline-offset: -3px;
+}
+.stage[data-drop] .panel::after {
+  content: var(--drop-hint, "Drop to add");
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent, #4fa3ff);
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.icon__inner img { border-radius: 0; }
+
+.stage[data-shadow] .icon__mirror > * { filter: none; }
+
+.icon__inner .glyph {
+  display: grid;
+  place-items: center;
+  font-size: 46%;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #0d1218;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+}
+
+.icon--add .icon__inner svg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 2;
+  stroke-linecap: round;
+  padding: 26%;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 24%;
+  filter: none;
+}
+.icon--add:hover .icon__inner svg { stroke: var(--accent, #4fa3ff); border-color: var(--accent, #4fa3ff); }
+
+/* --- tiklama animasyonlari: dis transform'a dokunmaz, ic katmanda calisir --- */
+.anim-bounce { animation: a-bounce 480ms cubic-bezier(0.28, 0.9, 0.35, 1); }
+.anim-shake  { animation: a-shake 420ms ease; }
+.anim-pulse  { animation: a-pulse 380ms ease-out; }
+.anim-spin   { animation: a-spin 520ms cubic-bezier(0.3, 0.8, 0.3, 1); }
+.anim-jelly  { animation: a-jelly 620ms cubic-bezier(0.25, 1.4, 0.4, 1); }
+
+@keyframes a-bounce {
+  0%   { transform: translateY(0) scale(1); }
+  28%  { transform: translateY(-22%) scale(1.04); }
+  55%  { transform: translateY(0) scale(0.97); }
+  78%  { transform: translateY(-7%) scale(1.01); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes a-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  20% { transform: translateX(-8%) rotate(-6deg); }
+  50% { transform: translateX(8%) rotate(6deg); }
+  80% { transform: translateX(-4%) rotate(-3deg); }
+}
+@keyframes a-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+@keyframes a-spin {
+  0%   { transform: rotate(0deg) scale(1); }
+  60%  { transform: rotate(320deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+@keyframes a-jelly {
+  0%   { transform: scale(1, 1); }
+  25%  { transform: scale(1.24, 0.78); }
+  45%  { transform: scale(0.82, 1.18); }
+  65%  { transform: scale(1.1, 0.92); }
+  82%  { transform: scale(0.96, 1.04); }
+  100% { transform: scale(1, 1); }
+}
+
+/* --- hover ek hareketi (buyutmenin ustune biner, ic katmanda) ---
+   Yon dock'un kenarina gore: ikon her zaman ekranin ICINE dogru hareket eder,
+   kenara dogru degil (ust kenarda yukari kalkinca panelin disina tasiyordu). */
+.stage[data-hover="lift"] .icon:hover .icon__inner { transform: translateY(-8%); }
+.stage[data-hover="lift"][data-edge="top"] .icon:hover .icon__inner { transform: translateY(8%); }
+.stage[data-hover="lift"][data-edge="left"] .icon:hover .icon__inner { transform: translateX(8%); }
+.stage[data-hover="lift"][data-edge="right"] .icon:hover .icon__inner { transform: translateX(-8%); }
+
+.stage[data-hover="tilt"] .icon:hover .icon__inner { transform: perspective(220px) rotateX(14deg); }
+.stage[data-hover="tilt"][data-edge="top"] .icon:hover .icon__inner {
+  transform: perspective(220px) rotateX(-14deg);
+}
+.stage[data-hover="tilt"][data-edge="left"] .icon:hover .icon__inner {
+  transform: perspective(220px) rotateY(14deg);
+}
+.stage[data-hover="tilt"][data-edge="right"] .icon:hover .icon__inner {
+  transform: perspective(220px) rotateY(-14deg);
+}
+
+.icon__inner { transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* --- etiket --- */
+.tooltip {
+  position: absolute;
+  left: 0; top: 0;
+  padding: 4px 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+  font-size: 11.5px;
+  background: rgba(16, 19, 26, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f2f5f9;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: opacity 130ms ease;
+}
+.stage[data-edge="bottom"] .tooltip { bottom: calc(100% + 8px); top: auto; }
+.stage[data-edge="top"]    .tooltip { top: calc(100% + 8px); }
+.stage[data-edge="left"]   .tooltip { left: calc(100% + 8px); }
+.stage[data-edge="right"]  .tooltip { right: calc(100% + 8px); left: auto; }
+
+/* NOT: burada bir zamanlar `prefers-reduced-motion: reduce` kurali vardi ve
+   Windows'ta "animasyon efektleri" kapaliysa dock'un TUM animasyonlarini
+   (tiklama, hover, acilma, gizlenme) iptal ediyordu. Bu dock'ta animasyonlar
+   zaten tek tek ayarlardan seciliyor ve her birinin "Yok" secenegi var; isletim
+   sisteminin genel tercihi kullanicinin acik secimini ezmemeli. */
+
+
+/* ================= Temalar ================= */
+
+/* macOS Big Sur / Sonoma: cok yuvarlak, saydam, ince parlak kenar */
+[data-theme="bigsur-dark"] {
+  --panel-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.02) 46%, rgba(0, 0, 0, 0.12) 100%),
+    var(--bg, rgba(28, 31, 36, 0.55));
+  --panel-border: 1px solid rgba(255, 255, 255, 0.16);
+  --panel-inset: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 1px rgba(0, 0, 0, 0.3);
+  --panel-drop: 0 12px 40px rgba(0, 0, 0, 0.48);
+}
+
+[data-theme="bigsur-light"] {
+  --panel-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.22) 50%, rgba(0, 0, 0, 0.04) 100%),
+    var(--bg, rgba(233, 235, 240, 0.62));
+  --panel-border: 1px solid rgba(255, 255, 255, 0.75);
+  --panel-inset: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --panel-drop: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+/* Acik zeminde koyu ayrintilar daha okunur */
+[data-theme="bigsur-light"] .tooltip {
+  background: rgba(250, 251, 253, 0.95);
+  color: #16202b;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+[data-theme="bigsur-light"] .grip span { background: rgba(0, 0, 0, 0.3); }
+[data-theme="bigsur-light"] .grip:hover span { background: rgba(0, 0, 0, 0.62); }
+[data-theme="bigsur-light"] .icon--add .icon__inner svg {
+  stroke: rgba(0, 0, 0, 0.45);
+  border-color: rgba(0, 0, 0, 0.22);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* macOS Leopard: 3B cam raf — ustte gloss, altta yansima seridi */
+[data-theme="aqua"] {
+  --panel-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.08) 46%, rgba(0, 0, 0, 0.2) 100%),
+    var(--bg, rgba(14, 19, 25, 0.42));
+  --panel-border: 1px solid rgba(255, 255, 255, 0.3);
+  --panel-inset:
+    inset 0 2px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    inset 0 -22px 26px -22px rgba(255, 255, 255, 0.22);
+  --panel-drop: 0 14px 34px rgba(0, 0, 0, 0.5);
+  --panel-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 48%);
+  --tile-bg: radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04) 60%, rgba(0, 0, 0, 0.1));
+  --tile-border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+/* SDVZ tarzi fircalanmis metal plaka: bizel + koselerde vida */
+[data-theme="metal"] {
+  --panel-bg:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 2px, rgba(0, 0, 0, 0.05) 2px 4px),
+    linear-gradient(180deg, #b9c0c7 0%, #8f969d 46%, #676e75 100%);
+  --panel-border: 1px solid #2b2f34;
+  --panel-inset:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    inset 0 0 0 2px rgba(35, 39, 44, 0.9);
+  --panel-drop: 0 8px 22px rgba(0, 0, 0, 0.55);
+  --panel-overlay:
+    radial-gradient(circle at 11px 11px, #d7dde3 0 2px, #4a5157 2px 3.2px, transparent 3.6px),
+    radial-gradient(circle at calc(100% - 11px) 11px, #d7dde3 0 2px, #4a5157 2px 3.2px, transparent 3.6px),
+    radial-gradient(circle at 11px calc(100% - 11px), #d7dde3 0 2px, #4a5157 2px 3.2px, transparent 3.6px),
+    radial-gradient(circle at calc(100% - 11px) calc(100% - 11px), #d7dde3 0 2px, #4a5157 2px 3.2px, transparent 3.6px);
+  --tile-bg: linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.18));
+  --tile-border: 1px solid rgba(0, 0, 0, 0.45);
+  --tile-inset: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+[data-theme="metal"] .grip span { background: rgba(0, 0, 0, 0.45); }
+[data-theme="metal"] .grip:hover span { background: rgba(0, 0, 0, 0.75); }
+
+/* Windows 7 Aero: mavi cam, ortada parlaklik kirilmasi, disinda hale */
+[data-theme="aero"] {
+  --panel-bg:
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.28) 0%,
+      rgba(255, 255, 255, 0.06) 48%,
+      rgba(255, 255, 255, 0.16) 49%,
+      rgba(255, 255, 255, 0.02) 100%),
+    var(--bg, rgba(43, 79, 120, 0.44));
+  --panel-border: 1px solid rgba(255, 255, 255, 0.45);
+  --panel-inset: inset 0 0 0 1px rgba(255, 255, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  --panel-drop: 0 0 16px var(--accent-soft, rgba(155, 214, 255, 0.32)), 0 10px 26px rgba(0, 0, 0, 0.42);
+  --panel-overlay: radial-gradient(120% 80% at 50% -10%, rgba(255, 255, 255, 0.18), transparent 62%);
+}
+
+/* K-TEK tarzi karbon dokusu + altta vurgu renkli LED seridi */
+[data-theme="carbon"] {
+  --panel-bg:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.045) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.045) 0 2px, transparent 2px 4px),
+    linear-gradient(180deg, #191c21 0%, #0d0f12 100%),
+    var(--bg, rgba(16, 18, 22, 0.88));
+  --panel-border: 1px solid rgba(255, 255, 255, 0.1);
+  --panel-inset:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 0 var(--accent, #35e0c8),
+    inset 0 -10px 16px -12px var(--accent-soft, rgba(53, 224, 200, 0.38));
+  --panel-drop: 0 10px 26px rgba(0, 0, 0, 0.65);
+  --tile-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.25));
+  --tile-border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Windows 11: duz akrilik, ince kenar, kucuk yaricap */
+[data-theme="win11"] {
+  --panel-bg: var(--bg, rgba(32, 34, 37, 0.72));
+  --panel-border: 1px solid rgba(255, 255, 255, 0.09);
+  --panel-inset: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --panel-drop: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* Neon: koyu zemin, vurgu renkli isiyan cerceve */
+[data-theme="neon"] {
+  --panel-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(0, 0, 0, 0.22) 100%),
+    var(--bg, rgba(10, 15, 30, 0.5));
+  --panel-border: 1px solid var(--accent-soft, rgba(124, 243, 255, 0.38));
+  --panel-inset:
+    inset 0 0 22px var(--accent-faint, rgba(124, 243, 255, 0.14)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --panel-drop: 0 0 22px var(--accent-soft, rgba(124, 243, 255, 0.38));
+  --panel-overlay-shadow: 0 0 12px var(--accent-faint, rgba(124, 243, 255, 0.14));
+}
+
+/* ================= Ayarlar penceresi ================= */
+html[data-view="settings"],
+html[data-view="settings"] body,
+html[data-view="settings"] #root { background: #12161d; overflow: auto; }
+
+.settings {
+  min-height: 100%;
+  padding: 18px 20px 28px;
+  font-size: 12.5px;
+  color: #dfe6ef;
+}
+.settings--loading { display: grid; place-items: center; opacity: 0.6; }
+
+.settings section { margin-bottom: 22px; }
+.settings h2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #7d8ea3;
+  padding-bottom: 7px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+}
+.row--stack { grid-template-columns: 1fr; align-items: start; gap: 8px; }
+.row--stack .row__control { width: 100%; }
+.row__label { display: flex; flex-direction: column; gap: 2px; }
+.row__label em { font-style: normal; font-size: 11px; color: #7d8ea3; }
+.row__control { display: flex; align-items: center; gap: 8px; }
+
+.row input[type="range"] { width: 150px; accent-color: #4fa3ff; }
+.row output {
+  min-width: 56px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #9fb0c4;
+}
+.row select {
+  min-width: 150px;
+  max-width: 240px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #1b2029;
+  color: inherit;
+  font: inherit;
+}
+.row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #4fa3ff; }
+
+.seg {
+  padding: 5px 11px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #1b2029;
+  color: #9fb0c4;
+  font: inherit;
+  cursor: pointer;
+}
+.seg--on { background: #2a6ec4; border-color: #3f88e0; color: #fff; }
+
+.add {
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #1b2029;
+  color: #cddaea;
+  font: inherit;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.add:hover { background: #232a35; }
+
+.err { color: #ff8d7a; font-size: 11.5px; padding-top: 4px; }
+
+.apps__add { display: flex; gap: 6px; }
+
+.apps { list-style: none; display: grid; gap: 6px; }
+.apps--nested {
+  grid-area: nested;
+  margin: 6px 0 2px;
+  padding-left: 10px;
+  border-left: 2px solid rgba(255, 255, 255, 0.1);
+}
+.apps__group {
+  grid-template-areas: "name pick ops" "path pick ops" "nested nested nested" !important;
+  background: #1a2130 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+.apps__sep { opacity: 0.85; }
+.apps__sep-line { color: #6f8095; font-weight: 600; letter-spacing: 0.06em; }
+.apps__group-pick {
+  grid-area: pick;
+  align-self: center;
+  margin: 0 8px;
+  max-width: 120px;
+  padding: 1px 4px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #1b2029;
+  color: #9fb0c4;
+  font: inherit;
+  font-size: 10.5px;
+}
+.apps li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "name pick ops" "path pick ops";
+  align-items: center;
+  gap: 2px 10px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: #171c24;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.apps__name {
+  grid-area: name;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  padding: 1px 0;
+  border-bottom: 1px solid transparent;
+}
+.apps__name:focus { outline: none; border-bottom-color: #4fa3ff; }
+.apps__path {
+  grid-area: path;
+  font-size: 11px;
+  color: #6f8095;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.apps__ops { grid-area: ops; display: flex; gap: 4px; }
+.apps__ops button {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #1e242e;
+  color: #b8c6d6;
+  font: inherit;
+  cursor: pointer;
+}
+.apps__ops button:hover:not(:disabled) { background: #28303c; }
+.apps__ops button:disabled { opacity: 0.3; cursor: default; }
+.apps__ops .danger:hover { background: #b8402f; border-color: #d2503c; color: #fff; }
+
+.row input[type="color"] {
+  width: 34px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+.row .hex {
+  width: 86px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #1b2029;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.themes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  width: 100%;
+}
+.theme-chip {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 7px 5px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  background: #171c24;
+  color: #9fb0c4;
+  font: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+.theme-chip:hover { background: #1d232d; }
+.theme-chip--on { border-color: #4fa3ff; color: #dfe6ef; }
+.theme-chip__panel {
+  position: relative;
+  width: 100%;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--panel-bg);
+  border: var(--panel-border);
+  box-shadow: var(--panel-inset);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  overflow: hidden;
+}
+.theme-chip__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--panel-overlay);
+  box-shadow: var(--panel-overlay-shadow);
+}
+.theme-chip__dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 28%;
+  /* --tile-bg her temada tanimli (cogunda "none"), bu yuzden taban rengi
+     ayri veriliyor: altlik tanimlayan temalarda uzerine biniyor. */
+  background-color: rgba(255, 255, 255, 0.42);
+  background-image: var(--tile-bg);
+  border: var(--tile-border);
+  box-shadow: var(--tile-inset);
+}
+.theme-chip__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 2px solid;
+  cursor: pointer;
+}
+.swatch:hover { transform: scale(1.12); }

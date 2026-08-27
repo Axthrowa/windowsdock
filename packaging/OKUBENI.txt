@@ -1,0 +1,27 @@
+WindowsDock - tasinabilir surum
+================================
+Tek dosya: WindowsDock.exe. Ek DLL gerekmez.
+
+Varsayilan davranis
+-------------------
+- Dock ekranin UST kenarina yaslidir.
+- Pencere duzeyi "Yalniz masaustu": tum uygulamalarin ALTINDA kalir, ustlerine
+  binmez. Masaustunu gorunce ortaya cikar (Win+D).
+- Otomatik gizleme acikken fare ust kenara yaklasinca acilir.
+Bunlarin hepsi Ayarlar penceresinden degistirilebilir.
+
+Kullanim
+--------
+- Tasima        : Panelin basindaki uc noktali tutamaci surukleyin.
+                  Cift tik -> yeniden ekran kenarina ortalanir.
+- Kisayol ekleme: Explorer'dan .exe / .lnk dosyalarini dock'un uzerine
+                  surukleyip birakin, veya "+" simgesine tiklayin.
+                  (Surukleme sirasinda dock'un uzerinde gorunmez bir birakma
+                  katmani belirir; bosta hicbir sey yapmaz.)
+- Ayarlar       : Tepsi simgesi -> Ayarlar, ya da panelin bos alanina sag tik.
+- Kaldirma      : Ikona sag tik -> Dock'tan kaldir.
+- Cikis         : Tepsi simgesi -> Cikis.
+
+Gereksinim : Microsoft Edge WebView2 Runtime (Windows 11'de kurulu gelir)
+Ayarlar    : %APPDATA%\com.axthrowa.windowsdock\dock.json
+Ikon cache : %LOCALAPPDATA%\com.axthrowa.windowsdock\cache\icons

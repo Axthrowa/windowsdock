@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WindowsDock — tema onizleme (gecici)</title>
+    <style>
+      body { background: #20242e; }
+      .preview-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 16px; }
+      .preview-cell {
+        position: relative;
+        height: 200px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #46536b 0%, #232936 60%, #171b24 100%);
+      }
+      .preview-cell .stage { position: absolute; }
+      .preview-label {
+        position: absolute; left: 10px; top: 8px; z-index: 9;
+        font: 700 11px/1 "Segoe UI", sans-serif; letter-spacing: .06em;
+        text-transform: uppercase; color: #e8eef7; text-shadow: 0 1px 3px rgba(0,0,0,.7);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/preview.tsx"></script>
+  </body>
+</html>
