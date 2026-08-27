@@ -5,7 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import Dock, { type VisibleEntry } from "../components/Dock";
 import { computeGeometry, kindOf, panelRect } from "../lib/magnify";
-import { groupWith, moveTo, removeItem } from "../lib/items";
+import { groupWith, moveTo, pruneEmptied, removeItem } from "../lib/items";
 import * as ipc from "../lib/ipc";
 import { makeT } from "../lib/i18n";
 import { tintBytes } from "../lib/color";
@@ -17,6 +17,11 @@ const PALETTE = ["#4fa3ff", "#59c17a", "#f5c542", "#e0674f", "#a97fe0", "#3fc0c8
 const GRACE = 1400;
 /** Gizlenme animasyonunun suresi (styles.css ile ayni tutulmali) */
 const HIDE_ANIM = 300;
+/** Tiklama animasyonlarinin suresi, ms (styles.css'teki .anim-* ile ayni tutulmali) */
+const CLICK_ANIM: Record<string, number> = {
+  bounce: 480, shake: 420, pulse: 380, spin: 520, jelly: 620,
+  pop: 340, wobble: 620, flip: 560, tada: 720, swing: 640, dive: 520,
+};
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -85,8 +90,13 @@ export default function DockView() {
   }, []);
 
   const commit = useCallback((next: DockConfig) => {
-    setConfig(next);
-    ipc.saveConfig(next).catch((e) => console.error("save", e));
+    // Son ogesi disari cikarilan grup kendiliginden kaybolur. Tek yerde
+    // yapiliyor: surukleme, sag tik menusu ve ayarlar ayni yoldan geciyor.
+    const prev = cfgRef.current;
+    const items = prev ? pruneEmptied(prev.items, next.items) : next.items;
+    const cfg = items === next.items ? next : { ...next, items };
+    setConfig(cfg);
+    ipc.saveConfig(cfg).catch((e) => console.error("save", e));
   }, []);
 
   // ---- pencere olcusu + konumu ----
@@ -336,6 +346,19 @@ export default function DockView() {
     } else applyHidden(false);
   }, [autoHide, hideDelay, edge, monitor, applyHidden, scheduleHide]);
 
+  // Gizleme zamanlayicisi yukaridaki etkide yalniz autoHide/hideDelay/edge/
+  // monitor degisince kuruluyor; ayarlardan tema ya da renk degistirmek
+  // bunlarin hicbiri degil. Zamanlayici o ana kadar tukenmisse (menuden
+  // Ayarlar'i acmak gibi) otomatik gizleme bir daha kendiliginden
+  // kurulmuyordu. Her config degisimi gizlemeyi yeniden kuruyor: fare
+  // dock'un ustundeyse ya da surukleme/menu varsa zaten scheduleHide'in
+  // kendi korumasi engelliyor.
+  useEffect(() => {
+    if (!config?.autoHide || config.autoHideMode === "dodge") return;
+    if (hiddenRef.current || over.current || dragging.current || menuOpen.current) return;
+    scheduleHide(config.hideDelay);
+  }, [config, scheduleHide]);
+
   // Pencere kacinma modu (Nexus: Dodge Windows)
   const dodgeOn = !!config?.autoHide && config?.autoHideMode === "dodge";
   useEffect(() => {
@@ -491,8 +514,16 @@ export default function DockView() {
       snd("launch");
       const path = item.kind === "recycler" ? "shell:RecycleBinFolder" : item.path;
       ipc.launchItem(path, item.args).catch((e) => console.error("launch", e));
-      // Nexus'taki "hide after launching an application"
-      if (cfgRef.current?.hideAfterLaunch) applyHidden(true);
+      // Nexus'taki "hide after launching an application".
+      // Tiklama animasyonu bitene kadar bekliyoruz: aksi halde dock ayni
+      // karede kayboluyor ve animasyon hic gorunmuyordu ("tiklama
+      // animasyonlari calismiyor" sikayetinin sebebi buydu).
+      const cfg = cfgRef.current;
+      if (cfg?.hideAfterLaunch) {
+        const ms = CLICK_ANIM[cfg.clickAnim] ?? 0;
+        if (ms) window.setTimeout(() => applyHidden(true), ms);
+        else applyHidden(true);
+      }
     },
     [applyHidden, snd]
   );
@@ -650,11 +681,14 @@ export default function DockView() {
         });
       } catch (e) {
         console.error("menu", e);
+      } finally {
+        // Bayraklar her kosulda temizlenmeli: menu cagrisi hata verir ya da
+        // zaman asimina ugrarsa menuOpen acik kalir ve otomatik gizlemenin
+        // korumasi ("menu acikken gizleme") dock'u sonsuza dek gorunur tutar.
+        menuOpen.current = false;
+        ipc.setInputLock(false);
+        over.current = false;
       }
-
-      menuOpen.current = false;
-      ipc.setInputLock(false);
-      over.current = false;
       switch (action) {
         case "remove":
           if (item) onRemove(item.id);

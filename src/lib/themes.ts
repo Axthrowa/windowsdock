@@ -6,8 +6,15 @@ import type { Key } from "./i18n";
  *
  * Nexus/ObjectDock skinleri 9-dilim PNG arka planlar kullanir; burada ayni
  * gorunumler CSS katmanlariyla uretiliyor (dosya yok, olcekleme sorunu yok).
- * Tema yalniz `theme` alanini degil, kendine yakisan olculeri/efektleri de
+ * Tema yalniz `theme` alanini degil, kendine yakisan olculeri/renkleri de
  * yaziyor — kullanici sonra hepsini tek tek degistirebilir.
+ *
+ * `reflection` ve `shadow` bilerek DISARIDA: ikisi de panelin gorunumunu degil
+ * kapladigi ALANI degistiriyor (yansima seridi ikonlarin altina bos bir kusak
+ * aciyor, golge panelin disina tasiyor). Tema secmek bunlari kendiliginden
+ * acinca kullanici "neden ikonlarin altinda bosluk var, neden golge geldi"
+ * diye ayarlari tek tek geri almak zorunda kaliyordu; artik ikisi de yalniz
+ * kullanicinin kendi anahtari.
  */
 export type ThemeId =
   | "custom"
@@ -47,10 +54,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#4fa3ff",
       radius: 28,
       panelOpacity: 0.55,
-      reflection: false,
       glow: true,
       iconShadow: true,
-      shadow: false,
     },
   },
   {
@@ -61,10 +66,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#2a6ec4",
       radius: 28,
       panelOpacity: 0.62,
-      reflection: false,
       glow: true,
       iconShadow: true,
-      shadow: false,
     },
   },
   {
@@ -75,10 +78,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#57b6ff",
       radius: 20,
       panelOpacity: 0.42,
-      reflection: true,
       glow: true,
       iconShadow: true,
-      shadow: false,
     },
   },
   {
@@ -89,10 +90,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#d6dde4",
       radius: 12,
       panelOpacity: 0.92,
-      reflection: false,
       glow: false,
       iconShadow: true,
-      shadow: false,
     },
   },
   {
@@ -103,10 +102,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#9bd6ff",
       radius: 16,
       panelOpacity: 0.44,
-      reflection: true,
       glow: true,
       iconShadow: true,
-      shadow: false,
     },
   },
   {
@@ -117,10 +114,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#35e0c8",
       radius: 14,
       panelOpacity: 0.88,
-      reflection: false,
       glow: true,
       iconShadow: true,
-      shadow: false,
     },
   },
   {
@@ -131,10 +126,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#4cc2ff",
       radius: 8,
       panelOpacity: 0.72,
-      reflection: false,
       glow: true,
       iconShadow: false,
-      shadow: false,
     },
   },
   {
@@ -145,10 +138,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#7cf3ff",
       radius: 18,
       panelOpacity: 0.5,
-      reflection: true,
       glow: true,
       iconShadow: true,
-      shadow: false,
     },
   },
   {
@@ -159,10 +150,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#88c0d0",
       radius: 14,
       panelOpacity: 0.82,
-      reflection: false,
       glow: true,
       iconShadow: true,
-      shadow: false,
     },
   },
   {
@@ -173,10 +162,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#ff9a6c",
       radius: 22,
       panelOpacity: 0.62,
-      reflection: true,
       glow: true,
       iconShadow: true,
-      shadow: true,
     },
   },
   {
@@ -187,10 +174,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#3b8fd0",
       radius: 24,
       panelOpacity: 0.52,
-      reflection: false,
       glow: true,
       iconShadow: true,
-      shadow: true,
     },
   },
   {
@@ -201,10 +186,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#40ff96",
       radius: 6,
       panelOpacity: 0.9,
-      reflection: false,
       glow: true,
       iconShadow: false,
-      shadow: false,
     },
   },
   {
@@ -215,10 +198,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#000080",
       radius: 0,
       panelOpacity: 1,
-      reflection: false,
       glow: false,
       iconShadow: false,
-      shadow: true,
     },
   },
   {
@@ -229,10 +210,8 @@ export const THEMES: ThemeDef[] = [
       accent: "#c6a0ff",
       radius: 20,
       panelOpacity: 0.66,
-      reflection: true,
       glow: true,
       iconShadow: true,
-      shadow: false,
     },
   },
 ];
