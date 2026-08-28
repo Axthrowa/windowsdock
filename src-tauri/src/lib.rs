@@ -29,6 +29,7 @@ pub fn run() {
             config::load_config,
             config::save_config,
             icons::resolve_icon,
+            icons::resolve_link_target,
             trace::trace_js,
             shellmenu::show_item_menu,
             dropzone::set_pointer_over,

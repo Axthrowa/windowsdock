@@ -282,6 +282,8 @@ export default function SettingsView() {
       id: `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`,
       label: name.replace(/\.(exe|lnk|url|bat|cmd)$/i, ""),
       path: picked,
+      // .lnk sonradan silinse bile ikon/baslatma calissin diye hedefi simdi cozuyoruz.
+      target: (await ipc.resolveTarget(picked)) ?? "",
       args: [],
       icon: null,
       color: PALETTE[base.items.length % PALETTE.length],
