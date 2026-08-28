@@ -120,6 +120,73 @@ fn shell_start(target: &str, args: &[String]) -> Result<(), String> {
         .map_err(|e| format!("shell baslatma hatasi: {e}"))
 }
 
+/// Bir .lnk/.url'yi uygulamanin kendi klasorune kopyalar ve kopyanin yolunu
+/// dondurur; kisayol degilse None.
+///
+/// Neden kopya: kullanici kisayolu dock'a attiktan sonra masaustundekini
+/// siliyor (dock'un varlik sebebi zaten masaustunu bosaltmak). Dock elinde
+/// yalnizca o dosyanin YOLU olsaydi oge tamamen olu kalirdi. Sadece hedef
+/// .exe'yi saklamak da yetmez: .lnk kendi argumanlarini ve calisma dizinini
+/// tasiyor ("RiotClientServices.exe --launch-product=valorant" gibi), hedefi
+/// dogrudan calistirmak yanlis seyi acardi. Dosyanin tamamini kopyalayinca
+/// ikon, argumanlar, calisma dizini ve masaustune geri koyma aynen korunuyor.
+/// Id'yi dosya adi olarak guvenli hale getirir (yol ayraci, surucu harfi yok).
+fn safe_id(id: &str) -> String {
+    id.chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
+        .collect()
+}
+
+#[tauri::command]
+pub fn stash_shortcut(app: tauri::AppHandle, id: String, path: String) -> Result<Option<String>, String> {
+    use tauri::Manager;
+
+    let src = Path::new(path.trim());
+    let ext = src
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    if !matches!(ext.as_str(), "lnk" | "url") || !src.is_file() {
+        return Ok(None);
+    }
+
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("config dizini alinamadi: {e}"))?
+        .join("shortcuts");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("kisayol dizini olusturulamadi: {e}"))?;
+
+    // Dosya adi ogenin id'si: silinen oge ile kopyasi tek eslesmede.
+    let dest = dir.join(format!("{}.{ext}", safe_id(&id)));
+    std::fs::copy(src, &dest).map_err(|e| format!("kisayol kopyalanamadi: {e}"))?;
+    Ok(Some(dest.to_string_lossy().into_owned()))
+}
+
+/// Config'de artik gecmeyen kisayol kopyalarini siler (oge kaldirilinca kalan).
+#[tauri::command]
+pub fn prune_shortcuts(app: tauri::AppHandle, keep: Vec<String>) -> Result<(), String> {
+    use tauri::Manager;
+
+    let dir = match app.path().app_config_dir() {
+        Ok(d) => d.join("shortcuts"),
+        Err(_) => return Ok(()),
+    };
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return Ok(()); // klasor yoksa yapacak is yok
+    };
+    let keep: std::collections::HashSet<String> = keep.iter().map(|i| safe_id(i)).collect();
+    for e in entries.flatten() {
+        let p = e.path();
+        let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
+        if !stem.is_empty() && !keep.contains(stem) {
+            let _ = std::fs::remove_file(&p);
+        }
+    }
+    Ok(())
+}
+
 /// Dock'tan disari suruklenen kisayolu masaustune geri koyar.
 /// - Kaynak .lnk ise masaustune kopyalanir (zaten oradaysa dokunulmaz)
 /// - Degilse hedefe isaret eden yeni bir .lnk olusturulur
@@ -201,7 +268,13 @@ pub fn eject_to_desktop(
             if src.parent() == Some(desktop.as_path()) {
                 return Ok(path); // zaten masaustunde
             }
-            let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or(&label);
+            // Etiket oncelikli: kaynak uygulamanin kendi kopyasiysa dosya adi
+            // ogenin id'sidir, masaustune o adla koymak anlamsiz olurdu.
+            let stem = if label.trim().is_empty() {
+                src.file_stem().and_then(|s| s.to_str()).unwrap_or("Kisayol")
+            } else {
+                label.trim()
+            };
             let dest = unique(stem);
             std::fs::copy(src, &dest).map_err(|e| format!("kopyalanamadi: {e}"))?;
             return Ok(dest.to_string_lossy().into_owned());

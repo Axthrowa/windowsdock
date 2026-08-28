@@ -277,13 +277,15 @@ export default function SettingsView() {
       filters: [{ name: tr("pickFilter"), extensions: ["exe", "lnk", "url", "bat", "cmd"] }],
     });
     if (typeof picked !== "string") return;
+    const id = `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
     const name = picked.replace(/\\/g, "/").split("/").pop() ?? picked;
     const item: DockItem = {
-      id: `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`,
+      id,
       label: name.replace(/\.(exe|lnk|url|bat|cmd)$/i, ""),
       path: picked,
-      // .lnk sonradan silinse bile ikon/baslatma calissin diye hedefi simdi cozuyoruz.
-      target: (await ipc.resolveTarget(picked)) ?? "",
+      // Kisayolun kopyasini simdi aliyoruz: masaustundeki asil dosya silinse
+      // bile ikon, argumanlar ve masaustune geri koyma calismaya devam etsin.
+      target: (await ipc.stashShortcut(id, picked)) ?? "",
       args: [],
       icon: null,
       color: PALETTE[base.items.length % PALETTE.length],
