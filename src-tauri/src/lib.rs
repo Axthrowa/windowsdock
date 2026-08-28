@@ -41,6 +41,8 @@ pub fn run() {
             tray::update_tray,
             launcher::launch_item,
             launcher::eject_to_desktop,
+            launcher::stash_shortcut,
+            launcher::prune_shortcuts,
             window::apply_layout,
             window::monitor_info,
             window::set_acrylic,

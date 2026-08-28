@@ -32,8 +32,10 @@ export interface DockItem {
   id: string;
   label: string;
   path: string;
-  /** `path` bir .lnk ise isaret ettigi gercek dosya (eklenirken cozulur).
-      Masaustundeki kisayol silinse bile ikon/baslatma/geri koyma buradan calisir. */
+  /** `path` bir .lnk/.url ise uygulamanin kendi klasorundeki KOPYASI
+      (oge eklenirken alinir). Masaustundeki asil dosya silinse bile ikon,
+      baslatma (argumanlariyla), calisiyor gostergesi ve masaustune geri koyma
+      bu kopyadan calisir. Kisayol olmayan yollarda bos. */
   target: string;
   args: string[];
   icon: string | null;
@@ -139,9 +141,15 @@ export const ejectToDesktop = (path: string, label: string, target = "") =>
 
 export const resolveIcon = (path: string, target = "") =>
   invoke<string | null>("resolve_icon", { path, target });
-/** .lnk -> isaret ettigi gercek dosya (yoksa null). Oge eklenirken cagrilir. */
+/** .lnk -> isaret ettigi gercek dosya (yoksa null). */
 export const resolveTarget = (path: string) =>
   invoke<string | null>("resolve_link_target", { path }).catch(() => null);
+/** Kisayolu uygulamanin kendi klasorune kopyalar; kopyanin yolunu dondurur. */
+export const stashShortcut = (id: string, path: string) =>
+  invoke<string | null>("stash_shortcut", { id, path }).catch(() => null);
+/** Config'de gecmeyen kisayol kopyalarini siler. */
+export const pruneShortcuts = (keep: string[]) =>
+  invoke<void>("prune_shortcuts", { keep }).catch(() => {});
 
 export const applyLayout = (req: LayoutReq) =>
   invoke<{ x: number; y: number }>("apply_layout", { req });

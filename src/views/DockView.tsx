@@ -266,6 +266,44 @@ export default function DockView() {
     };
   }, [pathKey]);
 
+  // ---- kisayol kopyalari: acilista goc + artik temizligi ----
+  // Surum oncesi eklenmis ogelerin kopyasi yok. Kaynak .lnk hala duruyorsa
+  // simdi kopyaliyoruz; kullanici masaustunu bosaltinca oge olmesin. Kaynak
+  // zaten silinmisse yapacak bir sey yok (bilgi o dosyadaydi).
+  const stashDone = useRef(false);
+  useEffect(() => {
+    const cfg = cfgRef.current;
+    if (!cfg || stashDone.current || !flatItems.length) return;
+    stashDone.current = true;
+    let alive = true;
+    (async () => {
+      const missing = flatItems.filter(
+        (i) => i.kind === "app" && !i.target && /\.(lnk|url)$/i.test(i.path)
+      );
+      const stashed = await Promise.all(
+        missing.map((i) => ipc.stashShortcut(i.id, i.path).then((t) => [i.id, t] as const))
+      );
+      const found = new Map(stashed.filter(([, t]) => !!t));
+      if (alive && found.size) {
+        const cur = cfgRef.current;
+        if (cur) {
+          const apply = (list: DockItem[]): DockItem[] =>
+            list.map((i) => ({
+              ...i,
+              target: found.get(i.id) ?? i.target,
+              children: i.children?.length ? apply(i.children) : i.children,
+            }));
+          commit({ ...cur, items: apply(cur.items) });
+        }
+      }
+      // Kaldirilmis ogelerin kopyalari birikmesin.
+      ipc.pruneShortcuts(flatRef.current.map((i) => i.id));
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [flatItems, commit]);
+
   // ---- calisan uygulama gostergesi + geri donusum durumu ----
   const [running, setRunning] = useState<Record<string, boolean>>({});
   const [binEmpty, setBinEmpty] = useState(true);
@@ -470,18 +508,21 @@ export default function DockView() {
       const fresh = paths.filter((p) => p && !known.has(p.toLowerCase()));
       if (!fresh.length) return;
 
-      // Kisayolun isaret ettigi gercek dosyayi SIMDI cozuyoruz: kullanici
-      // masaustundeki .lnk'yi sonradan silerse dock elinde yalnizca olu bir
-      // yol kaliyordu (ikon cikmiyor, "masaustune geri koy" calismiyordu).
-      const targets = await Promise.all(fresh.map((p) => ipc.resolveTarget(p)));
+      // Kisayolun KOPYASINI simdi aliyoruz: kullanici masaustundeki .lnk'yi
+      // sonradan siliyor (dock'un varlik sebebi masaustunu bosaltmak) ve dock
+      // elinde yalnizca olu bir yol kaliyordu.
+      const ids = fresh.map(
+        (_, n) => `${Date.now().toString(36)}-${n}-${Math.floor(Math.random() * 1e6).toString(36)}`
+      );
+      const stashed = await Promise.all(fresh.map((p, n) => ipc.stashShortcut(ids[n], p)));
 
       const items = fresh.map((p, n) => {
         const base = p.replace(/\\/g, "/").split("/").pop() ?? p;
         return {
-          id: `${Date.now().toString(36)}-${n}-${Math.floor(Math.random() * 1e6).toString(36)}`,
+          id: ids[n],
           label: base.replace(/\.(exe|lnk|url|bat|cmd|msc|cpl)$/i, ""),
           path: p,
-          target: targets[n] ?? "",
+          target: stashed[n] ?? "",
           args: [] as string[],
           icon: null,
           color: PALETTE[(cfg.items.length + n) % PALETTE.length],
@@ -594,12 +635,13 @@ export default function DockView() {
     });
     if (typeof picked !== "string") return;
 
+    const id = `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
     const base = picked.replace(/\\/g, "/").split("/").pop() ?? picked;
     const item: DockItem = {
-      id: `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`,
+      id,
       label: base.replace(/\.(exe|lnk|url|bat|cmd)$/i, ""),
       path: picked,
-      target: (await ipc.resolveTarget(picked)) ?? "",
+      target: (await ipc.stashShortcut(id, picked)) ?? "",
       args: [],
       icon: null,
       color: PALETTE[cfg.items.length % PALETTE.length],
