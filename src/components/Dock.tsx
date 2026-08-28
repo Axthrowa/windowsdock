@@ -505,8 +505,16 @@ export default function Dock(props: Props) {
           );
         const list = sibs.map((x) => x.s.item);
         const fromIdx = list.findIndex((x) => x.id === dragged.id);
+        // Hedef yuvanin ONUNE mi ARDINA mi girdigimiz suruklemenin yonune bagli.
+        // Tek bir "<= d.to" sayimi kullaniliyordu; sola surukleyince hedefin
+        // ARDINA yaziyordu, bu yuzden en bastaki ikonun onune hicbir sey
+        // konamiyordu (0 yerine 1 cikiyordu). Bu ayrim displaced()'in ekranda
+        // gosterdigi yerlesimle de birebir ortusuyor.
+        const before = d.to < d.from;
         const toIdx = clamp(
-          sibs.filter((x) => x.i <= d.to && x.s.item.id !== dragged.id).length,
+          sibs.filter(
+            (x) => (before ? x.i < d.to : x.i <= d.to) && x.s.item.id !== dragged.id
+          ).length,
           0,
           Math.max(0, list.length - 1)
         );
