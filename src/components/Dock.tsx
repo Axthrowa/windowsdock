@@ -435,23 +435,30 @@ export default function Dock(props: Props) {
         const at = slotAt(geo, p);
         const target = at >= 0 ? slots[at] : undefined;
 
-        // GRUP ikonu: her yerine birakmak "icine ekle" demek (eskiden beri boyle).
-        // NORMAL ikon: yalniz ORTASINA birakmak "yeni grup kur"; kenarlari
-        // siralamaya birakiliyor. Ortasi/kenari ayrimi olmadan her kok ikon
-        // grup hedefi oluyor ve iki ikonu yan yana kaydirmak imkansiz hale
-        // geliyordu. Vurgu (icon--drop) yalniz grup kurulacakken cikiyor, yani
-        // hangi islemin olacagi birakmadan once gorunuyor.
+        // Yuvanin ORTASI birakma hedefi (gruba ekle / yeni grup kur), kenarlari
+        // siralama. Ayrim olmadan her ikon grup hedefi oluyor ve yan yana
+        // kaydirmak imkansiz hale geliyordu. Kural gruplar icin de gecerli:
+        // grubun her yeri hedef sayilinca grup bir duvar gibi davraniyor ve
+        // komsusundaki oge yerinden oynatilamiyordu. Vurgu (icon--drop) yalniz
+        // birakma hedefindeyken ciktigi icin hangi islemin olacagi onceden
+        // gorunuyor.
         const onGroupTarget =
           at !== d.from &&
           canDropOn(slots[d.from], target) &&
-          (target?.kind === "group" ||
-            Math.abs(p - (geo.starts[at] + geo.sizes[at] / 2)) <= geo.sizes[at] * GROUP_ZONE);
+          Math.abs(p - (geo.starts[at] + geo.sizes[at] / 2)) <= geo.sizes[at] * GROUP_ZONE;
 
         if (onGroupTarget) {
           d.onGroup = at;
         } else {
           d.onGroup = -1;
+          // Ilk ikonun oncesi ve son ikonun sonrasi (tutamac, "+" yuvasi, dolgu)
+          // eskiden hicbir seye denk gelmiyordu: d.to guncellenmedigi icin en
+          // basa/en sona tasima el yordamiyla dogru pikseli tutturmayi
+          // gerektiriyordu. Artik iki uc de en yakin siraya baglaniyor.
+          const lastItem = Math.max(0, slots.length - 2); // "add" hep sonda
           if (at >= 0 && slots[at].kind !== "add") d.to = at;
+          else if (p < geo.starts[0]) d.to = 0;
+          else d.to = lastItem;
         }
       } else {
         d.onGroup = -1;
