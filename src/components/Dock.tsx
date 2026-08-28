@@ -62,6 +62,9 @@ const ORIGIN: Record<string, string> = {
 
 /** Suruklemenin baslamis sayilmasi icin gereken hareket (px) */
 const DRAG_SLOP = 6;
+/** Ikonun "yeni grup kur" bolgesi: yuva ortasindan +-bu oran kadari.
+    Geri kalani siralama icin; siralama gruplamadan cok daha sik yapiliyor. */
+const GROUP_ZONE = 0.22;
 /** Panelden bu kadar uzaklasinca "disari at" sayilir (px) */
 const EJECT = 34;
 /** Grubun uzerinde bu kadar durunca yerinde acilir (ms) */
@@ -431,9 +434,20 @@ export default function Dock(props: Props) {
         const p = horizontal ? e.clientX - r.left : e.clientY - r.top;
         const at = slotAt(geo, p);
         const target = at >= 0 ? slots[at] : undefined;
-        // Bir GRUBUN uzerindeysek "gruba ekle", baska bir IKONUN uzerindeysek
-        // "yeni grup kur" hedefi; ikisi de siralama degildir.
-        if (at !== d.from && canDropOn(slots[d.from], target)) {
+
+        // GRUP ikonu: her yerine birakmak "icine ekle" demek (eskiden beri boyle).
+        // NORMAL ikon: yalniz ORTASINA birakmak "yeni grup kur"; kenarlari
+        // siralamaya birakiliyor. Ortasi/kenari ayrimi olmadan her kok ikon
+        // grup hedefi oluyor ve iki ikonu yan yana kaydirmak imkansiz hale
+        // geliyordu. Vurgu (icon--drop) yalniz grup kurulacakken cikiyor, yani
+        // hangi islemin olacagi birakmadan once gorunuyor.
+        const onGroupTarget =
+          at !== d.from &&
+          canDropOn(slots[d.from], target) &&
+          (target?.kind === "group" ||
+            Math.abs(p - (geo.starts[at] + geo.sizes[at] / 2)) <= geo.sizes[at] * GROUP_ZONE);
+
+        if (onGroupTarget) {
           d.onGroup = at;
         } else {
           d.onGroup = -1;
