@@ -15,6 +15,12 @@ pub struct DockItem {
     pub label: String,
     /// .exe, .lnk, .url, klasor veya bir URI (https://, ms-settings: ...)
     pub path: String,
+    /// `path` bir .lnk ise isaret ettigi GERCEK dosya; oge eklenirken bir kez
+    /// cozulur. Masaustundeki kisayol sonradan silinince dock yalniz olu bir
+    /// yol tutuyordu: ikon cikmiyor (harf fallback'i) ve "masaustune geri koy"
+    /// calismiyordu. Ikisi de artik bu alana dusuyor. Bos = cozulemedi/gereksiz.
+    #[serde(default)]
+    pub target: String,
     #[serde(default)]
     pub args: Vec<String>,
     /// Kullanicinin elle sectigi ikon. Bos ise Windows'tan cikarilan ikon kullanilir.
@@ -193,6 +199,7 @@ impl Default for DockConfig {
             id: id.into(),
             label: label.into(),
             path: path.into(),
+            target: String::new(),
             args: vec![],
             icon: None,
             color: Some(color.into()),

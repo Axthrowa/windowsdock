@@ -17,6 +17,10 @@ const PALETTE = ["#4fa3ff", "#59c17a", "#f5c542", "#e0674f", "#a97fe0", "#3fc0c8
 const GRACE = 1400;
 /** Gizlenme animasyonunun suresi (styles.css ile ayni tutulmali) */
 const HIDE_ANIM = 300;
+/** Es zamanli ikon cikarma sayisi: kabugu bogmadan sirayi hizlandirir. */
+const ICON_WORKERS = 4;
+/** Ikon onbellegi anahtari: cozum hem yola hem kayitli .lnk hedefine bagli. */
+const iconKey = (it: DockItem) => `${it.path}|${it.target ?? ""}`;
 /** Tiklama animasyonlarinin suresi, ms (styles.css'teki .anim-* ile ayni tutulmali) */
 const CLICK_ANIM: Record<string, number> = {
   bounce: 480, shake: 420, pulse: 380, spin: 520, jelly: 620,
@@ -202,32 +206,61 @@ export default function DockView() {
   }, [config?.items]);
 
   const pathKey = useMemo(
-    () => flatItems.map((i) => `${i.id}|${i.path}|${i.icon ?? ""}`).join(";"),
+    () => flatItems.map((i) => `${i.id}|${i.path}|${i.target ?? ""}|${i.icon ?? ""}`).join(";"),
     [flatItems]
   );
 
   const flatRef = useRef<DockItem[]>([]);
   flatRef.current = flatItems;
 
+  /** "yol|hedef" -> cozulmus PNG. Ayni kaynak iki kez kabuga sorulmaz. */
+  const iconCache = useRef(new Map<string, string | null>());
   useEffect(() => {
     const items = flatRef.current;
     if (!items.length) return;
     let alive = true;
-    (async () => {
-      const next: Record<string, string | null> = {};
+    const cache = iconCache.current;
+
+    // Once bilinenleri yaz: onbellekteki yollar ve zaten cozulmus ogeler
+    // aninda gorunur, kalkan ogeler haritadan duser.
+    setIcons((prev) => {
+      const seeded: Record<string, string | null> = {};
       for (const it of items) {
-        if (it.icon) {
-          next[it.id] = it.icon;
-          continue;
-        }
-        try {
-          next[it.id] = await ipc.resolveIcon(it.path);
-        } catch {
-          next[it.id] = null;
-        }
+        const k = iconKey(it);
+        const known = it.icon ?? (cache.has(k) ? cache.get(k)! : prev[it.id]);
+        if (known !== undefined) seeded[it.id] = known;
       }
-      if (alive) setIcons(next);
-    })();
+      return seeded;
+    });
+
+    const queue = items.filter((it) => !it.icon && !cache.has(iconKey(it)));
+    if (!queue.length) return;
+
+    // Eskiden butun ikonlar tek tek cozulur ve harita ANCAK dongu bitince
+    // yazilirdi. Yeni bir kisayol eklemek pathKey'i degistirip etkiyi bastan
+    // baslattigi icin yarim kalan is comp oluyordu: arka arkaya birkac kisayol
+    // eklendiginde harita hic yazilamiyor ve butun ikonlar harf fallback'ine
+    // dusuyordu. Artik her ikon cozulur cozulmez tek tek yaziliyor ve onbellek
+    // sayesinde yeniden baslayan tur yalniz yeni yollari soruyor.
+    const worker = async () => {
+      while (alive) {
+        const it = queue.shift();
+        if (!it) return;
+        let png: string | null = null;
+        try {
+          png = await ipc.resolveIcon(it.path, it.target ?? "");
+        } catch {
+          png = null;
+        }
+        cache.set(iconKey(it), png);
+        if (!alive) return;
+        setIcons((prev) => (prev[it.id] === png ? prev : { ...prev, [it.id]: png }));
+      }
+    };
+    void Promise.all(
+      Array.from({ length: Math.min(ICON_WORKERS, queue.length) }, worker)
+    );
+
     return () => {
       alive = false;
     };
@@ -250,7 +283,10 @@ export default function DockView() {
 
     const tick = async () => {
       if (apps.length) {
-        const flags = await ipc.runningFlags(apps.map((i) => i.path));
+        // Kayitli hedef varsa onu gonderiyoruz: kaynak .lnk silinmisse yol
+        // olu, Rust tarafi cozemiyor ve uygulama hic "calisiyor" gorunmuyordu.
+        // Hedef zaten cozulmus gercek dosya; canli .lnk ile ayni sonucu verir.
+        const flags = await ipc.runningFlags(apps.map((i) => i.target || i.path));
         if (!alive) return;
         const next: Record<string, boolean> = {};
         apps.forEach((it, n) => (next[it.id] = flags[n] ?? false));
@@ -427,12 +463,17 @@ export default function DockView() {
 
   // ---- Explorer'dan surukle-birak ile kisayol ekleme ----
   const addPaths = useCallback(
-    (paths: string[]) => {
+    async (paths: string[]) => {
       const cfg = cfgRef.current;
       if (!cfg || !paths.length) return;
       const known = new Set(cfg.items.map((i) => i.path.toLowerCase()));
       const fresh = paths.filter((p) => p && !known.has(p.toLowerCase()));
       if (!fresh.length) return;
+
+      // Kisayolun isaret ettigi gercek dosyayi SIMDI cozuyoruz: kullanici
+      // masaustundeki .lnk'yi sonradan silerse dock elinde yalnizca olu bir
+      // yol kaliyordu (ikon cikmiyor, "masaustune geri koy" calismiyordu).
+      const targets = await Promise.all(fresh.map((p) => ipc.resolveTarget(p)));
 
       const items = fresh.map((p, n) => {
         const base = p.replace(/\\/g, "/").split("/").pop() ?? p;
@@ -440,6 +481,7 @@ export default function DockView() {
           id: `${Date.now().toString(36)}-${n}-${Math.floor(Math.random() * 1e6).toString(36)}`,
           label: base.replace(/\.(exe|lnk|url|bat|cmd|msc|cpl)$/i, ""),
           path: p,
+          target: targets[n] ?? "",
           args: [] as string[],
           icon: null,
           color: PALETTE[(cfg.items.length + n) % PALETTE.length],
@@ -513,7 +555,7 @@ export default function DockView() {
       setExpandedId(null);
       snd("launch");
       const path = item.kind === "recycler" ? "shell:RecycleBinFolder" : item.path;
-      ipc.launchItem(path, item.args).catch((e) => console.error("launch", e));
+      ipc.launchItem(path, item.args, item.target ?? "").catch((e) => console.error("launch", e));
       // Nexus'taki "hide after launching an application".
       // Tiklama animasyonu bitene kadar bekliyoruz: aksi halde dock ayni
       // karede kayboluyor ve animasyon hic gorunmuyordu ("tiklama
@@ -557,6 +599,7 @@ export default function DockView() {
       id: `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`,
       label: base.replace(/\.(exe|lnk|url|bat|cmd)$/i, ""),
       path: picked,
+      target: (await ipc.resolveTarget(picked)) ?? "",
       args: [],
       icon: null,
       color: PALETTE[cfg.items.length % PALETTE.length],
@@ -578,11 +621,15 @@ export default function DockView() {
       // masaustune geri konur.
       if (item.kind === "app") {
         try {
-          const dest = await ipc.ejectToDesktop(item.path, item.label);
+          const dest = await ipc.ejectToDesktop(item.path, item.label, item.target ?? "");
           ipc.traceJs(`eject -> ${dest}`);
         } catch (e) {
+          // Masaustune konamadiysa ogeyi dock'tan SILMIYORUZ. Eskiden hata
+          // yutulup oge yine de kaldiriliyordu: kisayol ne masaustunde ne
+          // dock'ta kaliyor, kullanici icin "kayboldu" demekti.
           console.error("eject", e);
           ipc.traceJs(`eject hata: ${e}`);
+          return;
         }
       }
       const cfg = cfgRef.current;

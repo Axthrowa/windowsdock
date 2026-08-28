@@ -35,11 +35,26 @@ fn needs_shell(target: &str, p: &Path) -> bool {
 /// Dock ogesini baslatir. Ana surece bagli olmayan (detached) bir cocuk process
 /// olusturur; dock kapansa bile uygulama acik kalir.
 #[tauri::command]
-pub fn launch_item(path: String, args: Vec<String>) -> Result<(), String> {
-    let target = path.trim().to_string();
-    if target.is_empty() {
+/// `target`: ogenin kayitli .lnk hedefi; `path` artik diskte yoksa bu calisir.
+pub fn launch_item(
+    path: String,
+    args: Vec<String>,
+    target: Option<String>,
+) -> Result<(), String> {
+    let mut target_path = path.trim().to_string();
+    if target_path.is_empty() {
         return Err("bos hedef".into());
     }
+    // Kisayol silinmisse ogeyi olu birakmiyoruz: eklenirken cozulen gercek
+    // dosyaya dusuyoruz. Kosul MUTLAK yola bakiyor -- "notepad.exe" gibi
+    // PATH'ten cozulen adlar ve URI'ler dosya olarak var olmaz.
+    if let Some(fallback) = target.as_deref().map(str::trim).filter(|t| !t.is_empty()) {
+        let p = Path::new(&target_path);
+        if p.is_absolute() && !p.exists() && Path::new(fallback).exists() {
+            target_path = fallback.to_string();
+        }
+    }
+    let target = target_path;
     let p = PathBuf::from(&target);
 
     #[cfg(windows)]
@@ -109,10 +124,16 @@ fn shell_start(target: &str, args: &[String]) -> Result<(), String> {
 /// - Kaynak .lnk ise masaustune kopyalanir (zaten oradaysa dokunulmaz)
 /// - Degilse hedefe isaret eden yeni bir .lnk olusturulur
 #[tauri::command]
-pub fn eject_to_desktop(path: String, label: String) -> Result<String, String> {
+/// `target`: ogenin kayitli .lnk hedefi; `path` artik diskte yoksa kisayol
+/// buna kurulur.
+pub fn eject_to_desktop(
+    path: String,
+    label: String,
+    target: Option<String>,
+) -> Result<String, String> {
     #[cfg(not(windows))]
     {
-        let _ = (&path, &label);
+        let _ = (&path, &label, &target);
         Err("yalniz Windows".into())
     }
 
@@ -121,7 +142,8 @@ pub fn eject_to_desktop(path: String, label: String) -> Result<String, String> {
         use std::path::{Path, PathBuf};
         use windows::core::{Interface, PCWSTR};
         use windows::Win32::System::Com::{
-            CoCreateInstance, CoTaskMemFree, IPersistFile, CLSCTX_INPROC_SERVER,
+            CoCreateInstance, CoInitializeEx, CoTaskMemFree, IPersistFile, CLSCTX_INPROC_SERVER,
+            COINIT_APARTMENTTHREADED,
         };
         use windows::Win32::UI::Shell::{
             IShellLinkW, SHGetKnownFolderPath, ShellLink, FOLDERID_Desktop, KF_FLAG_DEFAULT,
@@ -137,6 +159,25 @@ pub fn eject_to_desktop(path: String, label: String) -> Result<String, String> {
             let s = p.to_string().map_err(|e| e.to_string())?;
             CoTaskMemFree(Some(p.0 as *const core::ffi::c_void));
             PathBuf::from(s)
+        };
+
+        // Masaustundeki asil kisayol silinmisse ogenin yolu olu demektir:
+        // eklenirken cozulmus gercek hedefe dusuyoruz. O da yoksa kirik bir
+        // .lnk uretmek yerine hata donduruyoruz; cagiran taraf ogeyi dock'ta
+        // birakiyor. Kosul MUTLAK yola bakiyor -- "notepad.exe" gibi PATH'ten
+        // cozulen adlar ve "ms-settings:" gibi URI'ler dosya olarak var olmaz
+        // ve onlarin kisayolu dogrudan kurulabilir.
+        let dead = {
+            let p = Path::new(&path);
+            p.is_absolute() && !p.exists()
+        };
+        let path: String = if dead {
+            match target.as_deref().map(str::trim).filter(|t| Path::new(t).exists()) {
+                Some(t) => t.to_string(),
+                None => return Err(format!("kaynak artik yok: {path}")),
+            }
+        } else {
+            path
         };
 
         let src = Path::new(&path);
@@ -169,6 +210,12 @@ pub fn eject_to_desktop(path: String, label: String) -> Result<String, String> {
         // Yeni kisayol olustur.
         let dest = unique(if label.trim().is_empty() { "Kisayol" } else { label.trim() });
         unsafe {
+            // Komut Tauri'nin is parcacigi havuzunda calisiyor; orada COM
+            // baslatilmis degil ve CoCreateInstance CO_E_NOTINITIALIZED
+            // donuyordu. Hata yukarida yutuldugu icin oge dock'tan siliniyor
+            // ama masaustune hicbir sey konmuyordu. (icons.rs ayni sebeple
+            // kendi co_init'ini yapiyor.) Zaten baska modda baslatilmissa yut.
+            let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
             let link: IShellLinkW = CoCreateInstance(&ShellLink, None, CLSCTX_INPROC_SERVER)
                 .map_err(|e| format!("ShellLink olusturulamadi: {e}"))?;
             let target = wide(&path);

@@ -32,6 +32,9 @@ export interface DockItem {
   id: string;
   label: string;
   path: string;
+  /** `path` bir .lnk ise isaret ettigi gercek dosya (eklenirken cozulur).
+      Masaustundeki kisayol silinse bile ikon/baslatma/geri koyma buradan calisir. */
+  target: string;
   args: string[];
   icon: string | null;
   color: string | null;
@@ -129,12 +132,16 @@ export interface LayoutReq {
 export const loadConfig = () => invoke<DockConfig>("load_config");
 export const saveConfig = (config: DockConfig) => invoke<void>("save_config", { config });
 
-export const launchItem = (path: string, args: string[] = []) =>
-  invoke<void>("launch_item", { path, args });
-export const ejectToDesktop = (path: string, label: string) =>
-  invoke<string>("eject_to_desktop", { path, label });
+export const launchItem = (path: string, args: string[] = [], target = "") =>
+  invoke<void>("launch_item", { path, args, target });
+export const ejectToDesktop = (path: string, label: string, target = "") =>
+  invoke<string>("eject_to_desktop", { path, label, target });
 
-export const resolveIcon = (path: string) => invoke<string | null>("resolve_icon", { path });
+export const resolveIcon = (path: string, target = "") =>
+  invoke<string | null>("resolve_icon", { path, target });
+/** .lnk -> isaret ettigi gercek dosya (yoksa null). Oge eklenirken cagrilir. */
+export const resolveTarget = (path: string) =>
+  invoke<string | null>("resolve_link_target", { path }).catch(() => null);
 
 export const applyLayout = (req: LayoutReq) =>
   invoke<{ x: number; y: number }>("apply_layout", { req });

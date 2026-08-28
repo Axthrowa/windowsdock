@@ -17,19 +17,41 @@ fn cache_key(path: &str, stamp: u64) -> String {
     format!("{h:016x}")
 }
 
+/// Bir .lnk'nin isaret ettigi gercek dosyayi dondurur (.lnk degilse dosyanin
+/// kendisi, cozulemezse None). Oge dock'a eklenirken bir kez cagrilir; sonuc
+/// `DockItem.target` icinde saklanir ki kaynak kisayol silinse bile ikon ve
+/// "masaustune geri koy" calismaya devam etsin.
+#[tauri::command]
+pub fn resolve_link_target(path: String) -> Option<String> {
+    resolve_target(&path)
+}
+
 /// Bir dock ogesi icin ikon PNG'sinin diskteki yolunu dondurur.
 /// Cikarilamayan hedefler (URI, kayip dosya) icin `None` -> UI harf fallback'i cizer.
 #[tauri::command]
-pub fn resolve_icon(app: AppHandle, path: String) -> Result<Option<String>, String> {
+/// `target`: ogenin kayitli .lnk hedefi; `path` artik diskte yoksa ikon oradan
+/// cikarilir.
+pub fn resolve_icon(
+    app: AppHandle,
+    path: String,
+    target: Option<String>,
+) -> Result<Option<String>, String> {
     #[cfg(not(windows))]
     {
-        let _ = (&app, &path);
+        let _ = (&app, &path, &target);
         Ok(None)
     }
 
     #[cfg(windows)]
     {
-        let Some(target) = imp::locate(&path) else {
+        // Once ogenin kendi yolu, olmazsa eklenirken cozulmus hedef.
+        let Some(target) = imp::locate(&path).or_else(|| {
+            target
+                .as_deref()
+                .map(str::trim)
+                .filter(|t| !t.is_empty())
+                .and_then(imp::locate)
+        }) else {
             return Ok(None);
         };
 

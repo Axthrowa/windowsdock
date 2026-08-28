@@ -15,6 +15,7 @@ const blank = (kind: DockItem["kind"], label: string): DockItem => ({
   id: newId(),
   label,
   path: "",
+  target: "",
   args: [],
   icon: null,
   color: null,
